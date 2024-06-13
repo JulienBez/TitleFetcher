@@ -20,7 +20,7 @@ This script allows us to fetch scientific article titles from the [OpenAlex](htt
 python PaperFinder/paperMain.py
 ```
 
-**Warning** : this script fetch around 14 million scientific paper titles, which might take a while. We managed to fetch 1 million titles / hour while running 4 parallel instances of this script, but this might not be an ideal solution. Use with caution. Finally, run you have to run the following script :
+**Warning** : this script fetch around 14 million scientific paper titles, which might take a while. We managed to fetch 1 million titles / hour while running 4 parallel instances of this script, but this might not be an ideal solution. Use with caution. Finally, you have to run the following script :
 
 ```
 python PaperFinder/metadata.py

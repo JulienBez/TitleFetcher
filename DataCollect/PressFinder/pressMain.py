@@ -28,12 +28,24 @@ def getDictPress():
         json.dump(dict_press, f, indent=4, ensure_ascii=False)
 
 
+def applyTag():
+    "apply a simple tag to indicate from which dataset each title come from"
+    with open("PressFinder/data/dict_press.json",'r',encoding="utf-8") as f:
+        dict_press = json.load(f)
+    for k,v in dict_press.items():
+        v["origin"] = "press"
+    with open('PressFinder/data/dict_press.json', 'w',encoding="utf'8") as f:
+        json.dump(dict_press, f, indent=4, ensure_ascii=False)
+
 if __name__ == "__main__":
 
     if not os.path.exists("PressFinder/data/dict_press.json"):
         print("getting titles... (this might takes a while !)")
         getDictPress()
+        applyTag()
         print("titles saved in PressFinder/data/dict_press.json !")
+
+    applyTag()
 
     print("getting some basic metadata...")
     with open("PressFinder/data/dict_press.json",'r',encoding="utf-8") as f:
