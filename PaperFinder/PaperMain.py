@@ -48,7 +48,7 @@ def mergeJson(files,merge):
     for file in files:
         os.remove(f"data/results/{year}/{file}")
 
-years = ["2020","2021","2022","2023"] # années qu'on veut scrapper
+years = ["2020"] # années qu'on veut scrapper
 mail = "mailto=julien.bezancon@sorbonne-universite.fr" # mail, nécessaire pour scrapper mieux
 
 createFolder("data")
@@ -77,7 +77,7 @@ for year in years:
     mergeCheck = os.listdir(f"data/merge/{year}")
     if len(mergeCheck) > 0:
         merge = sorted([int(i.split("/")[-1].replace(".json","")) for i in mergeCheck],reverse=True)[0] + 1
-        
+
     counter = 0 # pour nommer nos fichiers results/
 
     while state == 0:
