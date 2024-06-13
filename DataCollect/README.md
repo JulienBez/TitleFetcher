@@ -10,7 +10,7 @@ This is a very simple script that allows us to download, read and extract titles
 python MovieFinder/movieMain.py
 ```
 
-The resulting dataset (dict_movies.json) will be stored in the newly created **MovieFinder/data/** folder. This script collects around 10 million movie titles.
+The resulting dataset (dict_movies.json) will be stored in the newly created **MovieFinder/data** folder. This script collects around 10 million movie titles.
 
 ## PaperFinder
 
@@ -26,7 +26,7 @@ python PaperFinder/paperMain.py
 python PaperFinder/metadata.py
 ```
 
-The resulting dataset (around 70 json files) will be stored in the newly created **PaperFinder/data/merge/** folder. 
+The resulting dataset (around 70 json files) will be stored in the newly created **PaperFinder/data/merge** folder. 
 
 ## PressFinder
 
