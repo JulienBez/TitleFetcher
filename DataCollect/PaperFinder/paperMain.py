@@ -6,13 +6,13 @@ import requests
 def metadata(year,counter,cursor):
     "make progressive saves of the current page we are fetching"
     if not os.path.exists(f'logs/metadata_{year}.json'):
-        with open(f'logs/metadata_{year}.json', 'w',encoding="utf'8") as f:
+        with open(f'PaperFinder/logs/metadata_{year}.json', 'w',encoding="utf'8") as f:
             json.dump({}, f, indent=4, ensure_ascii=False)
-    with open(f'logs/metadata_{year}.json','r',encoding="utf-8") as f:
+    with open(f'PaperFinder/logs/metadata_{year}.json','r',encoding="utf-8") as f:
         metadata = json.load(f)
     if str(counter) not in metadata:
         metadata[counter] = cursor
-        with open(f'logs/metadata_{year}.json', 'w',encoding="utf'8") as f:
+        with open(f'PaperFinder/logs/metadata_{year}.json', 'w',encoding="utf'8") as f:
             json.dump(metadata, f, indent=4, ensure_ascii=False)
         return False
     return True
@@ -32,7 +32,7 @@ def handleData(results,year,counter):
             dict_papers[res["id"]] = {}
         if res["language"] not in dict_papers[res["id"]]:
             dict_papers[res["id"]][res["language"]] = res["title"]
-    with open(f'data/results/{year}/{counter}.json', 'w',encoding="utf'8") as f:
+    with open(f'PaperFinder/data/results/{year}/{counter}.json', 'w',encoding="utf'8") as f:
         json.dump(dict_papers, f, indent=4, ensure_ascii=False)  
 
 
@@ -40,13 +40,13 @@ def mergeJson(files,merge):
     "we create a dict for every page (aka. 200 entries/dict). Once every 1000 dict, we merge them and delete them afterwards"
     dict_merge = {}
     for file in files:
-        with open(f"data/results/{year}/{file}",'r',encoding="utf-8") as f:
+        with open(f"PaperFinder/data/results/{year}/{file}",'r',encoding="utf-8") as f:
             data = json.load(f)
         dict_merge = {**dict_merge,**data}
-    with open(f'data/merge/{year}/{merge}.json', 'w',encoding="utf'8") as f:
+    with open(f'PaperFinder/data/merge/{year}/{merge}.json', 'w',encoding="utf'8") as f:
         json.dump(dict_merge, f, indent=4, ensure_ascii=False)
     for file in files:
-        os.remove(f"data/results/{year}/{file}")
+        os.remove(f"PaperFinder/data/results/{year}/{file}")
 
 
 if __name__ == "__main__":
@@ -54,31 +54,31 @@ if __name__ == "__main__":
     years = ["2020","2021","2022","2023"] # years we want to fetch
     mail = "mailto=<YOURMAIL>" # mail, advised to use it
 
-    createFolder("data")
-    createFolder("logs")
-    createFolder("data/results") 
-    createFolder("data/merge")
+    createFolder("PaperFinder/data")
+    createFolder("PaperFinder/logs")
+    createFolder("PaperFinder/data/results") 
+    createFolder("PaperFinder/data/merge")
 
     for year in years:
 
-        createFolder(f"data/results/{year}")
-        createFolder(f"data/merge/{year}")
+        createFolder(f"PaperFinder/data/results/{year}")
+        createFolder(f"PaperFinder/data/merge/{year}")
 
         # CHANGE CURSOR #
         cursor = "per-page=200&cursor=*" # cursor to navigate from page to page
-        if os.path.exists(f'logs/metadata_{year}.json'): 
-            with open(f'logs/metadata_{year}.json','r',encoding="utf-8") as f:
+        if os.path.exists(f'PaperFinder/logs/metadata_{year}.json'): 
+            with open(f'PaperFinder/logs/metadata_{year}.json','r',encoding="utf-8") as f:
                 metadataCheck = json.load(f)
             key, cursor = sorted([[int(k),v] for k,v in metadataCheck.items()],reverse=True)[0]
             del metadataCheck[str(key)]
-            with open(f'logs/metadata_{year}.json', 'w',encoding="utf'8") as f:
+            with open(f'PaperFinder/logs/metadata_{year}.json', 'w',encoding="utf'8") as f:
                 json.dump(metadataCheck, f, indent=4, ensure_ascii=False)
 
         filters = f"filter=open_access.is_oa:true,type:types/article,publication_year:{year}" # our filters
         state = 0 # 0 = running and 1 = stop
 
         merge = 0 # to name our merge files + we check if merge files already exist just in case
-        mergeCheck = os.listdir(f"data/merge/{year}")
+        mergeCheck = os.listdir(f"PaperFinder/data/merge/{year}")
         if len(mergeCheck) > 0:
             merge = sorted([int(i.split("/")[-1].replace(".json","")) for i in mergeCheck],reverse=True)[0] + 1
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
                 if data["meta"]["next_cursor"] is None:
                     state = 1
-                    filesEnd = os.listdir(f"data/results/{year}")
+                    filesEnd = os.listdir(f"PaperFinder/data/results/{year}")
                     mergeJson(filesEnd,merge)
 
                 else:
@@ -107,7 +107,7 @@ if __name__ == "__main__":
             else:
                 counter += 1 
 
-            files = os.listdir(f"data/results/{year}")
+            files = os.listdir(f"PaperFinder/data/results/{year}")
             if len(files) == 1000:
                 mergeJson(files,merge)
                 merge += 1

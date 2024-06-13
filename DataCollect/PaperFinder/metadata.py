@@ -8,8 +8,20 @@ if __name__ == "__main__":
 
     languages = set()
     counter = 0
+    getTags = 1
 
-    for path in glob.glob("data/merge/*/*.json"):
+    for path in glob.glob("PaperFinder/data/merge/*/*.json"):
+
+        #GET TAGS#
+        if getTags == 1:
+            with open(path,'r',encoding="utf-8") as f:
+                dict_paper = json.load(f)
+            for k,v in dict_paper.items():
+                v["origin"] = "paper"
+            with open(path, 'w',encoding="utf'8") as f:
+                json.dump(dict_paper, f, indent=4, ensure_ascii=False)
+
+        # GET METADATA #
         with open(path,'r',encoding="utf-8") as f:
             dict_paper = json.load(f)
         counter += len(dict_paper.keys())

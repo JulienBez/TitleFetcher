@@ -16,7 +16,7 @@ def getLanguagesNumber(dict_movies):
 
 def getDictPress():
     dict_press = {}
-    for path in glob.glob("data/babel-briefings-v1-anon/*.json"): 
+    for path in glob.glob("PressFinder/data/babel-briefings-v1-anon/*.json"): 
         with open(path,'r',encoding="utf-8") as f:
             data = json.load(f)  
         for entry in data:
@@ -24,19 +24,19 @@ def getDictPress():
                 dict_press[entry["ID"]] = {}
             if entry["language"] not in dict_press[entry["ID"]]:
                 dict_press[entry["ID"]][entry["language"]] = entry["title"]
-    with open('data/dict_press.json', 'w',encoding="utf'8") as f:
+    with open('PressFinder/data/dict_press.json', 'w',encoding="utf'8") as f:
         json.dump(dict_press, f, indent=4, ensure_ascii=False)
 
 
 if __name__ == "__main__":
 
-    if not os.path.exists("data/dict_press.json"):
+    if not os.path.exists("PressFinder/data/dict_press.json"):
         print("getting titles... (this might takes a while !)")
         getDictPress()
-        print("titles saved in data/dict_press.json !")
+        print("titles saved in PressFinder/data/dict_press.json !")
 
     print("getting some basic metadata...")
-    with open("data/dict_press.json",'r',encoding="utf-8") as f:
+    with open("PressFinder/data/dict_press.json",'r',encoding="utf-8") as f:
         dict_press = json.load(f)
     print(f"number of titles : {len(dict_press.keys())}")
     print(f"number of languages : {getLanguagesNumber(dict_press)}")
