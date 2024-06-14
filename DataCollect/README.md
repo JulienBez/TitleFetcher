@@ -1,6 +1,14 @@
 # DataCollect
 
-In order to create our corpus, we searched for titles in 3 main sources : movies, press and scientific papers. This folder contains every scripts we used to collect those titles.
+In order to create our corpus, we searched for titles in 3 main sources : movies, press papers and scientific papers. This folder contains every scripts we used to collect those titles. You can execute everything at once using the following script :
+
+```
+bash executeAll.sh
+```
+
+**However**, before executing this script, be aware 1) that you need to download and extract in **PressFinder/data** the [Babel Briefings](https://www.kaggle.com/datasets/felixludos/babel-briefings) corpus (Felix Leeb & Bernhard Schölkopf, 2024) and 2) that the whole process might take up to 15 hours. 
+
+If you wish to fetch titles from only one of the three sources availables, we introduce below each collect we proceeded to.
 
 ## MovieFinder
 
