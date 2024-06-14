@@ -5,51 +5,74 @@ import os
 import json
 import glob
 
-def getLanguagesNumber(dict_movies):
-    "allows us to count the number of languages in this dataset"
+def createFolder(folder):
+    "create a folder"
+    if not os.path.exists(folder): 
+        os.makedirs(folder) 
+
+
+def getLanguagesNumber(dict_press):
+    "allows us to count the number of languages for one file"
     languages = set()
-    for titleId, regions in dict_movies.items():
-        for k in regions.keys():
-            languages.add(k)
-    return len(languages)
+    for key,value in dict_press.items():
+        languages.add(value["language"].lower())
+    return languages
+
+
+def getMetadata():
+    "check all json files one by one to collect metadatas"
+    total_lang = set()
+    size = 0
+    for path in glob.glob("data/split/*.json"):
+        with open(path,'r',encoding="utf-8") as f:
+            dict_press = json.load(f)
+        lang = getLanguagesNumber(dict_press)
+        total_lang.update(lang)
+        size += len(dict_press.keys())
+    return len(total_lang), size
 
 
 def getDictPress():
+    "reads the corpus file and extract id, language and title for each press article"
+    "saves titles in X json files, each containing up to 200.000 titles"
+
     dict_press = {}
-    for path in glob.glob("PressFinder/data/babel-briefings-v1-anon/*.json"): 
+    counter = 0
+    file_counter = 0
+
+    for path in glob.glob("data/babel-briefings-v1-anon/*.json"): 
+
         with open(path,'r',encoding="utf-8") as f:
             data = json.load(f)  
+
         for entry in data:
+
             if entry["ID"] not in dict_press:
-                dict_press[entry["ID"]] = {}
-            if entry["language"] not in dict_press[entry["ID"]]:
-                dict_press[entry["ID"]][entry["language"]] = entry["title"]
-    with open('PressFinder/data/dict_press.json', 'w',encoding="utf'8") as f:
-        json.dump(dict_press, f, indent=4, ensure_ascii=False)
+                dict_press[entry["ID"]] = {"title":entry["title"],"language":entry["language"],"origin":"press"}
 
+            counter += 1
 
-def applyTag():
-    "apply a simple tag to indicate from which dataset each title come from"
-    with open("PressFinder/data/dict_press.json",'r',encoding="utf-8") as f:
-        dict_press = json.load(f)
-    for k,v in dict_press.items():
-        v["origin"] = "press"
-    with open('PressFinder/data/dict_press.json', 'w',encoding="utf'8") as f:
-        json.dump(dict_press, f, indent=4, ensure_ascii=False)
+            if counter == 200000:
+
+                with open(f'data/split/press_{file_counter}.json', 'w',encoding="utf'8") as f:
+                    json.dump(dict_press, f, indent=4, ensure_ascii=False)
+
+                counter = 0
+                dict_press = {}
+                file_counter += 1
+
 
 if __name__ == "__main__":
 
-    if not os.path.exists("PressFinder/data/dict_press.json"):
+    createFolder("data/split")
+
+    if len(os.listdir("data/split")) == 0:
         print("getting titles... (this might takes a while !)")
         getDictPress()
-        applyTag()
-        print("titles saved in PressFinder/data/dict_press.json !")
-
-    applyTag()
+        print("titles saved in data/split !")
 
     print("getting some basic metadata...")
-    with open("PressFinder/data/dict_press.json",'r',encoding="utf-8") as f:
-        dict_press = json.load(f)
-    print(f"number of titles : {len(dict_press.keys())}")
-    print(f"number of languages : {getLanguagesNumber(dict_press)}")
+    nb_lang, size = getMetadata()
+    print(f"number of titles : {size}")
+    print(f"number of languages : {nb_lang}")
     print("done !")

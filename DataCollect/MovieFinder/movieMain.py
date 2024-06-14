@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import pandas as pd
 
 import gzip
@@ -21,7 +22,9 @@ def getDataset():
 
 
 def getDictMovies():
-    "read the imdb file and extract id, language and movie for each entry"
+    "reads the imdb file and extract id, language and title for each movie"
+    "saves titles in X json files, each containing up to 200.000 titles"
+    "takes care of duplicates by looking at titles IDs and exact match"
 
     data = pd.read_csv("data/title.akas.tsv",sep="\t")
     dict_movies = {}
@@ -59,12 +62,30 @@ def getDictMovies():
     
 
 def getLanguagesNumber(dict_movies):
-    "allows us to count the number of languages in this dataset"
+    "allows us to count the number of languages for one file"
     languages = set()
-    for titleId, lang in dict_movies.items():
-        for k in lang.keys():
-            languages.add(k)
-    return len(languages)-1 # -1 to take into account the NULL value
+    counter_null = 0
+    for key,value in dict_movies.items():
+        if value["language"] == "\\N":
+            counter_null += 1
+        else:
+            languages.add(value["language"].lower())
+    return languages, counter_null
+
+
+def getMetadata():
+    "check all json files one by one to collect metadatas"
+    total_lang = set()
+    total_null = 0
+    size = 0
+    for path in glob.glob("data/split/*.json"):
+        with open(path,'r',encoding="utf-8") as f:
+            dict_movies = json.load(f)
+        lang, nb_null = getLanguagesNumber(dict_movies)
+        total_lang.update(lang)
+        total_null += nb_null
+        size += len(dict_movies.keys())
+    return len(total_lang), total_null, size
 
 
 if __name__ == "__main__":
@@ -75,14 +96,14 @@ if __name__ == "__main__":
     if not os.path.exists("data/title.akas.tsv"):
         getDataset()
 
-    if not os.path.exists("data/dict_movies.json"):
+    if len(os.listdir("data/split")) == 0:
         print("getting titles... (this might takes a while !)")
         getDictMovies()
-        print("titles saved in data/dict_movies.json !")
+        print("titles saved in data/split !")
 
     print("getting some basic metadata...")
-    with open("data/dict_movies.json",'r',encoding="utf-8") as f:
-        dict_movies = json.load(f)
-    print(f"number of titles : {len(dict_movies.keys())}")
-    print(f"number of languages : {getLanguagesNumber(dict_movies)}")
+    nb_lang, nb_null, size = getMetadata()
+    print(f"number of titles : {size}")
+    print(f"number of languages : {nb_lang}")
+    print(f"number of unreferenced language values : {nb_null}")
     print("done !")
