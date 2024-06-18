@@ -7,8 +7,7 @@ def getFreqLang():
     "returns a dict with the number of occurrences for each language"
     dict_languages = {}
     for path in tqdm(glob.glob("data/collected/*.json")):
-        with open(path,'r',encoding='utf-8') as f:
-            data = json.load(f)
+        data = openJson(path)
         for key,value in data.items():
             if value["language"] not in dict_languages:
                 dict_languages[value["language"]] = {"language_full":"","total":0}
@@ -40,8 +39,7 @@ def applyLanguageTag():
     null_values = ["\\N","null"]
     excluded = [i for i in openJson("logs/invalid_languages.json") if i not in null_values]
     for path in tqdm(glob.glob("data/collected/*.json")):
-        with open(path,'r',encoding='utf-8') as f:
-            data = json.load(f)
+        data = openJson(path)
         for key,value in data.items():
             if value["language"] not in excluded:
                 guess = detect(text=str(value["title"]).replace("\n",""), low_memory=False)["lang"]
@@ -58,10 +56,10 @@ def applyLanguageTag():
 
 def getLanguageConfidenceStats(glob_path="data/collected/*.json"):
     "count the number of titles for each possible language confidence score"
+    "if you want to run this function, do it BEFORE running the other ones in this python file"
     dict_counter = {"total":0,"1":0,"0":0,"-1":0,"-2":0}
     for path in tqdm(glob.glob(glob_path)):
-        with open(path,'r',encoding='utf-8') as f:
-            data = json.load(f)
+        data = openJson(path)
         for key, value in data.items():
             dict_counter[str(value["language_confidence"])] += 1
             dict_counter["total"] += 1
@@ -71,12 +69,11 @@ def getLanguageConfidenceStats(glob_path="data/collected/*.json"):
 
 
 def dropByLanguageConfidence(treshold=-1.5):
-    "drops titles whose language_confidence is inferior to treshold"
+    "drops titles whose language_confidence is inferior to the desired treshold"
     counter = 0
     for path in tqdm(glob.glob("data/collected/*.json")):
         new_data = {}
-        with open(path,'r',encoding='utf-8') as f:
-            data = json.load(f)
+        data = openJson(path)
         for key,value in data.items():
             if value["language_confidence"] > treshold:
                 new_data[key] = value
@@ -92,8 +89,7 @@ def dropByLanguageFreq(treshold=10000):
     counter = 0
     for path in tqdm(glob.glob("data/collected/*.json")):
         new_data = {}
-        with open(path,'r',encoding='utf-8') as f:
-            data = json.load(f)
+        data = openJson(path)
         for key,value in data.items():
             if dict_languages[value["language"]]["total"] >= treshold:
                 new_data[key] = value
@@ -116,8 +112,7 @@ def sortByLanguage():
     "sort our titles by language in dedicated folders"
     for path in tqdm(glob.glob("data/collected/*.json")):
         dict_lang = {}
-        with open(path,'r',encoding='utf-8') as f:
-            data = json.load(f)
+        data = openJson(path)
         for key,value in data.items():
             if value["language"] not in dict_lang:
                 dict_lang[value["language"]] = {}
@@ -129,13 +124,12 @@ def sortByLanguage():
 def mergeLanguagesFiles():
     "merge files in each language folder to make consistent json files"
     dict_languages = openJson("logs/dict_languages.json")
-    for lang, metadata in dict_languages.items():
+    for lang, metadata in tqdm(dict_languages.items()):
         dict_lang = {}
         counter = 0
         file_number = 0
         for path in glob.glob(f"data/languages/{lang}/*json"):
-            with open(path,'r',encoding='utf-8') as f:
-                data = json.load(f)
+            data = openJson(path)
             for key,value in data.items():
                 dict_lang[key] = value
                 counter += 1
@@ -161,6 +155,8 @@ def languageStep():
     getFreqLang()
     print("dropping titles from languages with low frequencies...")
     dropByLanguageFreq()
+    print("recounting occurrences of titles for each languages...")
+    getFreqLang()
     checkLang()
     print("sorting titles by languages in data/languages...")
     createLanguagesFolders()

@@ -22,6 +22,7 @@ def createFolder(folder):
     if not os.path.exists(folder): 
         os.makedirs(folder) 
 
+
 def removeFolder(folder):
    "remove a folder and its content"
    if os.path.exists(folder):
