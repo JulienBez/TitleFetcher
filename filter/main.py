@@ -9,7 +9,9 @@ if __name__ == "__main__":
     start = time.time()
 
     #languageStep()
-    test2()
+    sortByLanguage()
+    mergeLanguagesFiles()
+    #sentenceTransformersClustering()
 
     end = time.time()
     print(f"executed in {round(end - start,2)}")

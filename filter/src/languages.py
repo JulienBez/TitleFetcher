@@ -133,12 +133,12 @@ def mergeLanguagesFiles():
             for key,value in data.items():
                 dict_lang[key] = value
                 counter += 1
-                if counter == 200000:
+                if counter == 50000:
                     writeJson(f"data/languages/{lang}/{lang}_{file_number}.json",dict_lang)
                     file_number += 1
                     counter = 0
                     dict_lang = {}
-            os.remove(path) 
+            os.remove(path)
         writeJson(f"data/languages/{lang}/{lang}_{file_number}.json",dict_lang)
 
 

@@ -1,45 +1,81 @@
-from sentence_transformers import SentenceTransformer, util
+import os
 
 from .navigation import *
 
 import time
 
+def DBSCANSubsetsClustering():
 
-#https://github.com/UKPLab/sentence-transformers/blob/master/examples/applications/clustering/fast_clustering.py
-def test2():
+    #imports
 
-    #TODO1 : au lieu de faire ça on peut faire [ [id,titre,langue,origine], [id,titre,langue,origine], ... ]
-    titles = set()
-    #for path in glob.glob("data/languages/fr/*.json"):
-    for path in glob.glob("data/frtest/*.json"):
-        data = openJson(path)
-        for k,v in data.items():
-            titles.add(v["title"])
-    titles = list(titles) #TODO1 : et là on fait titles = [i[1] for i in notre_liste]
+    #instanciations variables
 
-    start = time.time()
+    #début boucle par langue
 
+        #vectorisation sur TOUS LES TITRES
+
+        #début boucle par fichier dans langue (enumerate pour récup les index)
+
+            #récupérer coordonnées des titres dans ce fichier dans l'espace vectoriel
+
+            #similarité cosinus
+
+            #dbscan clusters
+
+            #sauvegarde des clusters pour ce fichier
+
+        #union des clusters de chaque fichier par centroids ? par similarité ?
+
+        #sauvegarde cluster général
+
+
+def sentenceTransformersClustering(global_path="data/samples"):
+    #https://github.com/UKPLab/sentence-transformers/blob/master/examples/applications/clustering/fast_clustering.py
+    
+    from sentence_transformers import SentenceTransformer, util
+
+    languages = os.listdir(global_path)
     model = SentenceTransformer("distiluse-base-multilingual-cased-v1")
-    corpus_embeddings = model.encode(titles, batch_size=64, show_progress_bar=True, convert_to_tensor=True)
+    createFolder("data/clusters")
 
-    end = time.time()
-    print(f"embeddings executed in {round(end - start,2)}")
+    for language in languages:
 
-    start_time = time.time()
+        print(f"\n~#~# {language} #~#~\n")
 
-    # Two parameters to tune:
-    # min_cluster_size: Only consider cluster that have at least 25 elements
-    # threshold: Consider sentence pairs with a cosine-similarity larger than threshold as similar
-    clusters = util.community_detection(corpus_embeddings, min_community_size=25, threshold=0.75)
+        titles = {}
 
-    end = time.time()
-    print(f"clustering executed in {round(end - start,2)}")
+        for path in glob.glob(f"{global_path}/{language}/*.json"):
+            data = openJson(path)
+            for k,v in data.items():
+                if v["title"] not in titles:
+                    titles[v["title"]] = []
+                titles[v["title"]].append(k)
+        titles_only = list(titles.keys())
 
-    dict_cluster = {}
-    for i, cluster in enumerate(clusters):
-        print("Cluster {}, #{} Elements ".format(i , len(cluster)))
-        if str(i) not in dict_cluster:
-            dict_cluster[str(i)] = []
-        for sentence_id in cluster:
-            dict_cluster[str(i)].append(titles[sentence_id])
-    writeJson("test.json",dict_cluster)
+        print("starting embeddings...")
+        start = time.time()
+
+        corpus_embeddings = model.encode(titles_only, batch_size=64, show_progress_bar=True, convert_to_tensor=True)
+
+        end = time.time()
+        print(f"embeddings executed in {round(end - start,2)} !")
+
+        print("starting clustering...")
+        start_time = time.time()
+
+        # Two parameters to tune:
+        # min_cluster_size: Only consider cluster that have at least 25 elements
+        # threshold: Consider sentence pairs with a cosine-similarity larger than threshold as similar
+        clusters = util.community_detection(corpus_embeddings, min_community_size=25, threshold=0.75)
+
+        end = time.time()
+        print(f"clustering executed in {round(end - start,2)} !")
+
+        dict_cluster = {}
+        for i, cluster in enumerate(clusters):
+            if str(i) not in dict_cluster:
+                dict_cluster[str(i)] = []
+            for sentence_id in cluster:
+                title_index = titles_only[sentence_id]
+                dict_cluster[str(i)].append({title_index:titles[title_index]})
+        writeJson(f"data/clusters/{language}.json",dict_cluster)
