@@ -70,26 +70,32 @@ def mergeCheck(year):
         merge = sorted([int(i.split("/")[-1].replace(".json","")) for i in mergeCheck],reverse=True)[0] + 1
     return merge
 
-
-def getLanguagesNumber(dict_papers):
+    
+def getLanguagesNumber(dict_movies):
     "allows us to count the number of languages for one file"
     languages = set()
-    for key,value in dict_papers.items():
-        languages.add(value["language"].lower())
-    return languages
+    counter_null = 0
+    for key,value in dict_movies.items():
+        if value["language"] == "null":
+            counter_null += 1
+        else:
+            languages.add(value["language"].lower())
+    return languages, counter_null 
 
 
 def getMetadata():
     "check all json files one by one to collect metadatas"
     total_lang = set()
     size = 0
+    total_null = 0
     for path in glob.glob("data/merge/*/*.json"):
         with open(path,'r',encoding="utf-8") as f:
             dict_papers = json.load(f)
-        lang = getLanguagesNumber(dict_papers)
+        lang, counter_null = getLanguagesNumber(dict_papers)
         total_lang.update(lang)
+        total_null += counter_null
         size += len(dict_papers.keys())
-    return len(total_lang), size
+    return len(total_lang), size, total_null
 
 
 def collectFromAPI(year,mail):
@@ -152,7 +158,8 @@ if __name__ == "__main__":
             print(f"titles saved in data/merge/{year} !")
 
     print("getting some basic metadata...")
-    nb_lang, size = getMetadata()
+    nb_lang, size, counter_null = getMetadata()
     print(f"number of titles : {size}")
     print(f"number of languages : {nb_lang}")
+    print(f"number of unreferenced language values : {counter_null}")
     print("done !")

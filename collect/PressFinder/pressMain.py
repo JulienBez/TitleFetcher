@@ -75,4 +75,5 @@ if __name__ == "__main__":
     nb_lang, size = getMetadata()
     print(f"number of titles : {size}")
     print(f"number of languages : {nb_lang}")
+    print("no titles with unreferenced language values") #we didn't find any while looking at the corpus
     print("done !")
