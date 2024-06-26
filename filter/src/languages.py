@@ -1,25 +1,30 @@
 from .navigation import *
 
 def sortByLanguage():
-    "sort each title according to its language in a dedicated folder"
+    "sort each title according to its language in a dedicated folder and remove titles with 'null' as value"
     dict_languages = {}
+    number_null = 0
     removeFolder("data/languages")
     createFolder("data/languages")
     for path in tqdm(glob.glob("data/collected/*.json")):
         data = openJson(path)
         dict_lang = {}
         for key,value in data.items():
-            lang = value["language"]
-            if lang not in dict_languages:
-                dict_languages[lang] = 0
-                createFolder(f"data/languages/{lang}")
-            dict_languages[lang] += 1
-            if lang not in dict_lang:
-                dict_lang[lang] = {}
-            dict_lang[lang][key] = value
+            if value["title"] == "null" or value["title"] is None:
+                number_null += 1
+            else: 
+                lang = value["language"]
+                if lang not in dict_languages:
+                    dict_languages[lang] = 0
+                    createFolder(f"data/languages/{lang}")
+                dict_languages[lang] += 1
+                if lang not in dict_lang:
+                    dict_lang[lang] = {}
+                dict_lang[lang][key] = value
         for lang,entries in dict_lang.items():
             writeJson(path.replace("collected",f"languages/{lang}"),entries)
     writeJson("logs/dict_languages.json",dict(sorted(dict_languages.items(), key=lambda x:x[1], reverse=True)))
+    print(f"dropped {number_null} titles with 'null' as value")
         
 
 def dropNulls(nulls = ["\\N","null"]):
