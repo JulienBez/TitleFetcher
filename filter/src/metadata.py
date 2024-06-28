@@ -1,11 +1,12 @@
-from itertools import chain
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import TruncatedSVD
-import matplotlib.pyplot as plt
-import numpy as np
 import math
+import itertools
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from .navigation import *
+from .clustering import *
 
 def getBasicMetadatas():
     "get some basic metadatas for each language"
@@ -102,6 +103,7 @@ def getBasicMetadatasHistogram(logscale=True):
 
     width = 0.5
     fig, ax = plt.subplots()
+
     ax.bar(order_lang,total_paper,label="paper",width=width,color='red')
     ax.bar(order_lang,total_press,bottom=total_paper,label="press",width=width,color='green')
 
@@ -116,94 +118,180 @@ def getBasicMetadatasHistogram(logscale=True):
     ax.legend()
     plt.xticks(rotation=50, ha='right')
     plt.tight_layout()
-    plt.savefig(path,dpi=1000)
+    plt.savefig(path,dpi=1000,bbox_inches='tight')
+    plt.close()
 
 
-def getDataVizualisation(vectorizer,studiedOrigins=["movie","paper","press"],number=10):
+def getVizualisation(vectorizer,genres,number,clusters=False,clusteType="Kmeans"):
     "for each language, plot its titles vectors points to see if clustering might helps us"
-    "vectorizer : a vectorized list of titles"
-    "studiedOrigins : the origins we want to study via vizualisation"
-    "number : the max number of languages we want to analyze, take the <number> most populated languages"
 
-    name = "_".join(studiedOrigins)
+    name = "_".join(genres)
+    vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
 
     createFolder("logs/images")
-    createFolder("logs/images/getDataVizualisation")
-    createFolder(f"logs/images/getDataVizualisation/{name}")
 
-    dict_languages = openJson("logs/dict_languages.json")
-    sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
+    folderName = "getDataVizualisation"
+    if clusters:
+        folderName = "getClustersVizualisation"
 
-    #we want to adjust our graph size according to number
-    if number > len(sorted_dict_languages):
-        number = len(sorted_dict_languages)
+    createFolder(f"logs/images/{folderName}")
+    createFolder(f"logs/images/{folderName}/{name}")
 
-    #determine the number of lines and columns from number
-    nlines = 3
-    ncols = math.ceil(number/nlines)#round up to next integer
-    if number < nlines:
-        nlines = number
-        ncols = 1
-    
-    #create a fig with multiple subplots according to number of line and columns
-    fig, axs = plt.subplots(ncols, nlines, figsize=(15, 15), sharex=True, sharey=True) #to have number of col and lines
-    fig.tight_layout()
+    if not os.path.isfile(f"logs/images/{folderName}/{name}/{number}_{vectorizeName}.png"):
 
-    for lang, ax in tqdm(zip(sorted_dict_languages[0:number],axs.ravel()), total=number):
+        # we sort our languages to select the top <number>
+        dict_languages = openJson("logs/dict_languages.json")
+        sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
 
-        titles = []
-        origins = []
-        for path in glob.glob(f"data/languages/{lang}/*.json"):
-            data = openJson(path)
-            for k,v in data.items():
-                if v["origin"] in studiedOrigins:
-                    titles.append(v["title"])
-                    origins.append(v["origin"])
+        # we want to adjust our graph size according to <number>
+        if number > len(sorted_dict_languages):
+            number = len(sorted_dict_languages)
 
-        if len(titles) > 0:
+        # determine the number of lines and columns from <number>
+        nlines = 3
+        ncols = math.ceil(number/nlines) # round up to next integer
+        if number < nlines:
+            nlines = number
+            ncols = 1
+        
+        # create a fig with multiple subplots according to number of line and columns
+        fig, axs = plt.subplots(ncols, nlines, figsize=(15, 15), sharex=True, sharey=True) # to have number of col and lines
+        fig.tight_layout()
 
-            X = vectorizer.fit_transform(titles)
+        # for each language and subplot in range of indicated number
+        for lang, ax in tqdm(zip(sorted_dict_languages[0:number],axs.ravel()), total=number):
 
-            svd = TruncatedSVD(n_components=2)
-            X_reduced = svd.fit_transform(X)  # Works directly with the sparse matrix   
+            # we collect titles and their origins
+            titles, origins = getTitles(lang,genres)
+            if clusters:
+                origins = getClustersTags(vectorizer,lang,genres,titles,clusteType)
 
-            colors = []
-            for origin in origins:
-                if origin == "press":
-                    colors.append("green")
-                elif origin == "movie":
-                    colors.append("blue")
-                elif origin == "paper":
-                    colors.append("red")
+            if len(titles) > 0:
 
-            colsNames = []
-            labsNames = []
-            for so in studiedOrigins:
-                if so == "press":
-                    colsNames.append("green")
-                    labsNames.append(so)
-                if so == "movie":
-                    colsNames.append("blue")
-                    labsNames.append(so)
-                if so == "paper":
-                    colsNames.append("red")
-                    labsNames.append(so)
+                # we vectorize our titles to plot their vectors
+                X = getVectors(vectorizer,titles,lang,genres)
+                svd = TruncatedSVD(n_components=2)
+                X_reduced = svd.fit_transform(X)  # Works directly with the sparse matrix   
 
-            ax.scatter(X_reduced[:, 0], X_reduced[:, 1], c=colors, alpha=0.2, s=10)
+                # we color each genre differently and we get our labels
+                rainbow_colors = iter(plt.cm.rainbow(np.linspace(0, 1, len(set(origins)))))
+                colors = origins
+                colors_labels = []
+                origins_labels = []
+                for genre, c in zip(set(origins), rainbow_colors):
+                    colors_labels.append(c)
+                    origins_labels.append(genre)
+                    for i, origin in enumerate(colors):
+                        if type(origin) == str and origin == genre:
+                            colors[i] = c
 
-            handles = [plt.Line2D([0], [0], marker='o', color='w', label=label, markerfacecolor=color, markersize=10) for color, label in zip(colsNames,labsNames)]
-            ax.legend(handles=handles, title='Categories')
+                # we do the vizualisation
+                ax.scatter(X_reduced[:, 0], X_reduced[:, 1], c=colors, alpha=0.2, s=10)
+                handles = [plt.Line2D([0], [0], marker='o', color='w', label=label, markerfacecolor=color, markersize=10) for color, label in zip(colors_labels,origins_labels)]
+                if clusters == False:
+                    ax.legend(handles=handles, title='Categories')
+                ax.set_title(f'{lang}')
+                ax.grid(True)
 
-            #plt.xlabel('SVD Component 1')
-            #plt.ylabel('SVD Component 2')
-            ax.set_title(f'{lang}')
-            ax.grid(True) 
+            else:
+                print(f"{lang} has no titles from the following sources : {','.join(genres)}")
 
-        else:
-            print(f"{lang} has no titles from the following sources : {','.join(studiedOrigins)}")
-
-    vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
-    plt.savefig(f"logs/images/getDataVizualisation/{name}/{number}_{vectorizeName}.png")
+        plt.savefig(f"logs/images/{folderName}/{name}/{number}_{vectorizeName}.png",bbox_inches='tight')
+        plt.close()
         
 
+def dataVisualisationLoop(genres,number):
+    "proceed getDataVizualisation with different parameters"
     
+    timeWindowsName = f"{number}_{('_').join(genres)}"
+    runtimePath = "logs/images/getDataVizualisation/runtimes.json"
+
+    if not os.path.isfile(runtimePath):
+        writeJson(runtimePath,[])
+
+    ngrams = [(1,1),(2,2),(3,3),(1,2),(2,3)]
+    analyzers = ["char","word","char_wb"]
+
+    stop_words = None
+    lowercase = True
+
+    for ngram in ngrams:
+        for analyzer in analyzers:
+
+            start = time.time()
+
+            vectorizer = TfidfVectorizer(ngram_range=ngram, stop_words=stop_words, lowercase=lowercase, analyzer=analyzer)
+            getVizualisation(vectorizer,genres,number)
+
+            end = time.time()
+        
+            runtimes = openJson(runtimePath)
+            runtimes.append([timeWindowsName,str(vectorizer),round(end - start,2)])
+            writeJson(runtimePath,runtimes)
+
+
+def getGenresPerClusters(vectorizer,genres,number,clusteType):
+    ""
+
+    name = "_".join(genres)
+    vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
+
+    createFolder("logs/images")
+
+    folderName = "getGenrePerClusters"
+
+    createFolder(f"logs/images/{folderName}")
+    createFolder(f"logs/images/{folderName}/{name}")
+
+    if not os.path.isfile(f"logs/images/{folderName}/{name}/{number}_{vectorizeName}.png"):
+
+        # we sort our languages to select the top <number>
+        dict_languages = openJson("logs/dict_languages.json")
+        sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
+
+        # we want to adjust our graph size according to <number>
+        if number > len(sorted_dict_languages):
+            number = len(sorted_dict_languages)
+
+        # determine the number of lines and columns from <number>
+        nlines = 3
+        ncols = math.ceil(number/nlines) # round up to next integer
+        if number < nlines:
+            nlines = number
+            ncols = 1
+        
+        # create a fig with multiple subplots according to number of line and columns
+        fig, axs = plt.subplots(ncols, nlines, figsize=(15, 15), sharex=True, sharey=True) # to have number of col and lines
+        fig.tight_layout()
+
+        # for each language and subplot in range of indicated number
+        for lang, ax in tqdm(zip(sorted_dict_languages[0:number],axs.ravel()), total=number):
+
+            titles, origins = getTitles(lang,genres)
+            clusterTags = getClustersTags(vectorizer,lang,genres,titles,clusteType)
+
+            dict_res = {}
+            for i,tag in enumerate(clusterTags):
+                if tag not in dict_res:
+                    dict_res[tag] = {"movie":0,"paper":0,"press":0}
+                dict_res[tag][origins[i]] += 1
+            dict_res = sorted([{"tag":k,**v} for k,v in dict_res.items()], key=lambda k: k['tag'])
+
+            tag_order = [i["tag"] for i in dict_res]
+            total_movie = [i["movie"] for i in dict_res]
+            total_paper = [i["paper"] for i in dict_res]
+            total_press = [i["press"] for i in dict_res]
+
+            width = 0.5
+
+            ax.bar(tag_order,total_paper,label="paper",width=width,color='red')
+            ax.bar(tag_order,total_press,bottom=total_paper,label="press",width=width,color='green')
+
+            bottom_movie = np.array(total_paper) + np.array(total_press)
+            ax.bar(tag_order, total_movie, bottom=bottom_movie, label="movie", width=width, color='blue')
+
+            ax.set_title(f'{lang}')
+            ax.legend()
+
+        plt.savefig(f"logs/images/{folderName}/{name}/{number}_{vectorizeName}.png",dpi=1000,bbox_inches='tight')
+        plt.close()

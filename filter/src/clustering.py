@@ -8,46 +8,31 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from .navigation import *
 
-def extractTitlesFromLanguage(language):
-    ""
-    titles = {}
-    for path in glob.glob(f"data/languages/{language}/*.json"):
-        data = openJson(path)
-        for k,v in data.items():
-            if v["title"] not in titles:
-                titles[v["title"]] = []
-            titles[v["title"]].append(k)
-        writeJson(f"logs/languages/dict_{language}.json",titles)
-    return np.array([i for i in list(titles.keys()) if i is not None])
-
-
-def extractTitlesFromClusters(global_path):
-    ""
-    titles = []
-    for path in glob.glob(global_path):
-        data = openJson(path)
-        for k,v in data.items():
-            titles = titles + v
-    return np.array(titles)
-    
-
-def KMeansClustering(titles,vectorizer,language,iteration=0):
+def KMeansClustering(vectorizer,genres,number,n_clusters=10):
     ""
 
-    removeFolder(f"data/clusters/{language}/{iteration}")
-    createFolder(f"data/clusters/{language}/{iteration}")
+    vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
+    createFolder(f"data/clusters")
 
-    X = vectorizer.fit_transform(titles)
-    
-    kmean = KMeans(n_clusters=15,n_init=10)
-    kmean.fit(X)
-    clusters = kmean.labels_
+    dict_languages = openJson("logs/dict_languages.json")
+    sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
 
-    for cluster in list(set(clusters)):
-        res = {}
-        titles_clusters = titles[clusters == cluster]
-        res[str(cluster)] = list(titles_clusters)
-        writeJson(f"data/clusters/{language}/{iteration}/{language}_{str(cluster)}.json",res)
+    for lang in tqdm(sorted_dict_languages[-number:]):
+
+        createFolder(f"data/clusters/{lang}")
+        removeFolder(f"data/clusters/{lang}/{('_').join(genres)}")
+        createFolder(f"data/clusters/{lang}/{('_').join(genres)}")
+
+        titles, origins = getTitles(lang,genres)
+        X = getVectors(vectorizer,titles,lang,genres)
+        
+        kmean = KMeans(n_clusters=n_clusters,n_init=10)
+        kmean.fit(X)
+
+        res = {int(cluster):[] for cluster in sorted(kmean.labels_)}
+        for cluster, title in zip(kmean.labels_, titles):
+            res[int(cluster)].append(title)
+        writeJson(f"data/clusters/{lang}/{('_').join(genres)}/Kmeans_{vectorizeName}.json",res)
 
 
 def DBscanClustering(titles,vectorizer):
@@ -120,39 +105,3 @@ def clusterAnalyzer():
         #test_dbscan = openJson(f"data/clusters/{language}/0/{language}_9.json")
         #DBscanClustering(test_dbscan)
 
-
-def clusterViewer(clusters):
-    ""
-
-    import matplotlib.pyplot as plt
-    from sklearn.decomposition import TruncatedSVD #marche avec la sparse matrix direct
-    import itertools
-
-    all_titles = list(itertools.chain(*clusters.values()))
-
-    vectorizer = CountVectorizer(ngram_range=(1, 1), stop_words=None, lowercase=True)
-    X = vectorizer.fit_transform(all_titles)
-
-    svd = TruncatedSVD(n_components=2)
-    X_reduced = svd.fit_transform(X)  # Works directly with the sparse matrix   
-
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(clusters)))
-
-    clusters_2d_points = {}
-
-    index = 0 
-    for cluster_id, titles in clusters.items():
-        clusters_2d_points[cluster_id] = X_reduced[index:index + len(titles)]
-        index += len(titles)
-
-    fig, ax = plt.subplots(figsize=(12, 10))
-
-    for cluster_id, points in clusters_2d_points.items():
-        ax.scatter(points[:, 0], points[:, 1], label=f'Cluster {cluster_id}', s=50, alpha=0.75)
-
-    #ax.set_xlabel('Component 1')
-    #ax.set_ylabel('Component 2')
-    #ax.set_title('2D Visualization of Clusters')
-    ax.legend()
-
-    plt.show()
