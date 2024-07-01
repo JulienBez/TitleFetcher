@@ -2,10 +2,15 @@ import os
 import json
 import glob
 import pandas as pd
+from tqdm import tqdm
+from io import StringIO
 
 import gzip
 import shutil
-import urllib.request  
+import urllib.request
+
+import re
+episode_identifier = re.compile(r"#\d+\.\d")
 
 def createFolder(folder):
     "create a folder"
@@ -21,44 +26,76 @@ def getDataset():
             shutil.copyfileobj(f_in, f_out)
 
 
-def getDictMovies():
+def isInvalid(errors,title,titleId):
+    "check if title is invalid, aka if a row is malformated"
+    if "\ntt" in title:
+        errors.append(f"{titleId}\t1\t{title}")
+        return True
+    return False
+
+
+def isEpisode(episodes,title):
+    "check if title is an episode"
+    if any(("Episode dated" in title, "Episode #" in title, episode_identifier.search(title))):
+        episodes.append(title)
+        return True
+    return False
+
+
+def getDictMovies(data,file_counter=0):
     "reads the imdb file and extract id, language and title for each movie"
     "saves titles in X json files, each containing up to 200.000 titles"
     "takes care of duplicates by looking at titles IDs and exact match"
+    "retrieve invalid rows to try to fix them"
+    "drop episodes numbers from the dataset"
 
-    data = pd.read_csv("data/title.akas.tsv",sep="\t")
+    headers = "\t".join(list(data.columns.values))
+
     dict_movies = {}
-
+    invalid_list = [headers]
+    episode_list = []
+    bannedID = ""
     counter = 0
-    file_counter = 0
 
-    previous_title = []
-    previous_titleId = data["titleId"][0]
+    for i,titleId in enumerate(tqdm(data["titleId"])):
 
-    for i,titleId in enumerate(data["titleId"]):
+        title = str(data["title"][i])
+        invalid = isInvalid(invalid_list,title,titleId)
+        episode = isEpisode(episode_list,title)
 
-        if titleId != previous_titleId:
-            previous_title = []
+        if titleId != bannedID:
 
-        title = data["title"][i]
+            if invalid or episode:
+                bannedID = titleId
 
-        if str(title).find("\ntt") == -1 and titleId+str(i) not in dict_movies and title not in previous_title:
+            else:
 
-            dict_movies[titleId+str(i)] = {"title":title,"language":data["language"][i],"origin":"movie"}
-            previous_title.append(title)
+                language = data["language"][i]
+                dict_movies[f"{titleId}_{counter}"] = {"title":title,"language":language,"origin":"movie"}
 
-        counter += 1
+                counter += 1
 
-        if counter == 200000:
+                if counter == 200000:
 
-            with open(f'data/split/movies_{file_counter}.json', 'w',encoding="utf'8") as f:
-                json.dump(dict_movies, f, indent=4, ensure_ascii=False)
-                
-            file_counter += 1
-            counter = 0
-            dict_movies = {}
+                    with open(f'data/split/movies_{file_counter}.json', 'w',encoding="utf'8") as f:
+                        json.dump(dict_movies, f, indent=4, ensure_ascii=False)
+                        
+                    file_counter += 1
+                    counter = 0
+                    dict_movies = {}
+    
+    with open(f'data/split/movies_{file_counter}.json', 'w',encoding="utf'8") as f:
+        json.dump(dict_movies, f, indent=4, ensure_ascii=False)
 
-        previous_titleId = titleId
+    if os.path.isfile("data/episodes.json"):
+        with open("data/episodes.json","r",encoding="utf-8") as f:
+            old_episode_list = json.load(f)
+        episode_list = old_episode_list + episode_list
+
+    with open("data/episodes.json","w",encoding="utf-8") as f:
+        json.dump(episode_list, f, indent=4, ensure_ascii=False)
+
+    return file_counter+1, "\n".join(invalid_list)
     
 
 def getLanguagesNumber(dict_movies):
@@ -88,22 +125,35 @@ def getMetadata():
     return len(total_lang), total_null, size
 
 
+def getEpisodeFreq():
+    "returns the total number of titles dropped for corresponding to episodes"
+    with open("data/episodes.json","r",encoding="utf-8") as f:
+        episode_list = json.load(f)
+    return len(episode_list)
+
+
 if __name__ == "__main__":
 
     createFolder("data")
     createFolder("data/split")
 
     if not os.path.exists("data/title.akas.tsv"):
+        print("downloading the dataset...")
         getDataset()
 
     if len(os.listdir("data/split")) == 0:
         print("getting titles... (this might takes a while !)")
-        getDictMovies()
+        data = pd.read_csv("data/title.akas.tsv",sep="\t")
+        file_counter, invalids = getDictMovies(data)
+        invalids = pd.read_csv(StringIO(invalids),sep="\t").fillna("\\N")
+        getDictMovies(invalids,file_counter=file_counter)
         print("titles saved in data/split !")
 
     print("getting some basic metadata...")
     nb_lang, nb_null, size = getMetadata()
+    nb_episode = getEpisodeFreq()
     print(f"number of titles : {size}")
     print(f"number of languages : {nb_lang}")
     print(f"number of unreferenced language values : {nb_null}")
+    print(f"number of dropped titles corresponding to episodes numbers : {nb_episode}")
     print("done !")
