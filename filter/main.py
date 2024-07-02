@@ -8,26 +8,30 @@ if __name__ == "__main__":
     start = time.time()
 
     #languageStep()
-    #clusterAnalyzer()
+    #print("basic metadatas...")
     #getBasicMetadatas()
-    #getDataVizualisation(studiedOrigins=["movie"])
+    #getBasicMetadatasHistogram(logscale=True)
     #getBasicMetadatasHistogram(logscale=False)
     
+    #print("first vizualisation...")
     #vectorizer = TfidfVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
-    #getDataVizualisation(vectorizer,studiedOrigins=["press"],number = 8)
+    #getVizualisation(vectorizer,["paper"],8) #["movie","paper","press"]
     #dataVisualisationLoop(studiedOrigins=["movie","paper","press"],number=8)
 
-    genres = ["press","movie","paper"]
+    a,b = getTitles("en",["movie","paper","press"])
+    print(len(a))
+    1/0
+
+    genres = ["movie"]
     number = 8
 
-    dataVisualisationLoop(genres,number)
+    #dataVisualisationLoop(genres,number)
 
-    vectorizer = TfidfVectorizer(ngram_range=(1,1), stop_words=None, lowercase=True, analyzer="char")
+    vectorizer = TfidfVectorizer(ngram_range=(3,3), stop_words=None, lowercase=True, analyzer="char")
 
-    getVizualisation(vectorizer,genres,number)
+    #getVizualisation(vectorizer,genres,number)
     KMeansClustering(vectorizer,genres,number)
     getVizualisation(vectorizer,genres,number,clusters=True)
-
     getGenresPerClusters(vectorizer,genres,number,"Kmeans")
 
     end = time.time()

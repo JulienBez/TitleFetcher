@@ -75,6 +75,7 @@ def getBasicMetadatas():
 def getBasicMetadatasHistogram(logscale=True):
     "take our dict of metadata as input and create a histogram to visualize it"
 
+    createFolder("logs/images")
     dict_metadata = openJson("logs/dict_metadata.json")
 
     order_lang = []
@@ -188,8 +189,10 @@ def getVizualisation(vectorizer,genres,number,clusters=False,clusteType="Kmeans"
                 # we do the vizualisation
                 ax.scatter(X_reduced[:, 0], X_reduced[:, 1], c=colors, alpha=0.2, s=10)
                 handles = [plt.Line2D([0], [0], marker='o', color='w', label=label, markerfacecolor=color, markersize=10) for color, label in zip(colors_labels,origins_labels)]
-                if clusters == False:
-                    ax.legend(handles=handles, title='Categories')
+                legend_title = "Categories"
+                if clusters == True:
+                    legend_title = "Clusters"
+                ax.legend(handles=handles, title=legend_title)
                 ax.set_title(f'{lang}')
                 ax.grid(True)
 
@@ -204,12 +207,12 @@ def dataVisualisationLoop(genres,number):
     "proceed getDataVizualisation with different parameters"
     
     timeWindowsName = f"{number}_{('_').join(genres)}"
-    runtimePath = "logs/images/getDataVizualisation/runtimes.json"
+    runtimePath = "logs/images/runtimes.json"
 
     if not os.path.isfile(runtimePath):
         writeJson(runtimePath,[])
 
-    ngrams = [(1,1),(2,2),(3,3),(1,2),(2,3)]
+    ngrams = [(1,1),(2,2)]
     analyzers = ["char","word","char_wb"]
 
     stop_words = None

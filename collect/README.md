@@ -18,7 +18,7 @@ This is a very simple script that allows us to download, read and extract titles
 python movieMain.py
 ```
 
-The resulting dataset will be stored in the newly created **MovieFinder/data/split** folder. This script collects around 10 million movie titles.
+The resulting dataset will be stored in the newly created **MovieFinder/data/split** folder. This script collects around 12 million movie titles. Note that we remove a large number of irrevelant titles (like episodes numbers with no other informations) and try to determine the language of titles without referenced language.
 
 ## PaperFinder
 

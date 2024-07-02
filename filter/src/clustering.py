@@ -17,22 +17,25 @@ def KMeansClustering(vectorizer,genres,number,n_clusters=10):
     dict_languages = openJson("logs/dict_languages.json")
     sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
 
-    for lang in tqdm(sorted_dict_languages[-number:]):
+    for lang in tqdm(sorted_dict_languages[0:number]):
 
         createFolder(f"data/clusters/{lang}")
         removeFolder(f"data/clusters/{lang}/{('_').join(genres)}")
         createFolder(f"data/clusters/{lang}/{('_').join(genres)}")
 
         titles, origins = getTitles(lang,genres)
-        X = getVectors(vectorizer,titles,lang,genres)
-        
-        kmean = KMeans(n_clusters=n_clusters,n_init=10)
-        kmean.fit(X)
 
-        res = {int(cluster):[] for cluster in sorted(kmean.labels_)}
-        for cluster, title in zip(kmean.labels_, titles):
-            res[int(cluster)].append(title)
-        writeJson(f"data/clusters/{lang}/{('_').join(genres)}/Kmeans_{vectorizeName}.json",res)
+        if len(titles) > n_clusters:
+
+            X = getVectors(vectorizer,titles,lang,genres)
+            
+            kmean = KMeans(n_clusters=n_clusters,n_init=10)
+            kmean.fit(X)
+
+            res = {int(cluster):[] for cluster in sorted(kmean.labels_)}
+            for cluster, title in zip(kmean.labels_, titles):
+                res[int(cluster)].append(title)
+            writeJson(f"data/clusters/{lang}/{('_').join(genres)}/Kmeans_{vectorizeName}.json",res)
 
 
 def DBscanClustering(titles,vectorizer):

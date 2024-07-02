@@ -4,6 +4,7 @@ import glob
 import pandas as pd
 from tqdm import tqdm
 from io import StringIO
+from ftlangdetect import detect # pip install fasttext-langdetect
 
 import gzip
 import shutil
@@ -42,6 +43,16 @@ def isEpisode(episodes,title):
     return False
 
 
+def getLanguage(invalid_languages,title,language):
+    "get the most probable language for a given title"
+    try:
+        guess = detect(text=str(title).replace("\n",""), low_memory=False)
+        return guess["lang"]
+    except:
+        invalid_languages.append(language)
+        return "\\N"
+
+
 def getDictMovies(data,file_counter=0):
     "reads the imdb file and extract id, language and title for each movie"
     "saves titles in X json files, each containing up to 200.000 titles"
@@ -54,6 +65,7 @@ def getDictMovies(data,file_counter=0):
     dict_movies = {}
     invalid_list = [headers]
     episode_list = []
+    invalid_languages = []
     bannedID = ""
     counter = 0
 
@@ -72,6 +84,9 @@ def getDictMovies(data,file_counter=0):
 
                 language = data["language"][i]
                 dict_movies[f"{titleId}_{counter}"] = {"title":title,"language":language,"origin":"movie"}
+
+                if language == "\\N":
+                    dict_movies[f"{titleId}_{counter}"]["language"] = getLanguage(invalid_languages,title,language)
 
                 counter += 1
 
@@ -94,6 +109,14 @@ def getDictMovies(data,file_counter=0):
 
     with open("data/episodes.json","w",encoding="utf-8") as f:
         json.dump(episode_list, f, indent=4, ensure_ascii=False)
+
+    if os.path.isfile("data/invalid_languages.json"):
+        with open("data/invalid_languages.json","r",encoding="utf-8") as f:
+            old_invalid_languages = json.load(f)
+        invalid_languages = old_invalid_languages + invalid_languages
+
+    with open("data/invalid_languages.json","w",encoding="utf-8") as f:
+        json.dump(list(set(invalid_languages)), f, indent=4, ensure_ascii=False)
 
     return file_counter+1, "\n".join(invalid_list)
     
@@ -157,3 +180,4 @@ if __name__ == "__main__":
     print(f"number of unreferenced language values : {nb_null}")
     print(f"number of dropped titles corresponding to episodes numbers : {nb_episode}")
     print("done !")
+

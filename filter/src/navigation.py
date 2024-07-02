@@ -104,7 +104,7 @@ def getVectors(vectorizer,titles,language,genres):
 
 
 def getClustersTags(vectorizer,language,genres,titles,clusteType):
-  "" 
+  "for each title, retrieve in wich cluster it was found" 
   vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
   dict_clusters = openJson(f"data/clusters/{language}/{('_').join(genres)}/{clusteType}_{vectorizeName}.json")  
   clusterTags = []
