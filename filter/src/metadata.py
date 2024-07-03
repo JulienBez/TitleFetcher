@@ -206,8 +206,12 @@ def getVizualisation(vectorizer,genres,number,clusters=False,clusteType="Kmeans"
 def dataVisualisationLoop(genres,number):
     "proceed getDataVizualisation with different parameters"
     
+    createFolder("logs")
+    createFolder("images")
+    createFolder("getDataVizualisation")
+
     timeWindowsName = f"{number}_{('_').join(genres)}"
-    runtimePath = "logs/images/runtimes.json"
+    runtimePath = "logs/images/getDataVizualisation/runtimes.json"
 
     if not os.path.isfile(runtimePath):
         writeJson(runtimePath,[])

@@ -17,10 +17,11 @@ def KMeansClustering(vectorizer,genres,number,n_clusters=10):
     dict_languages = openJson("logs/dict_languages.json")
     sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
 
+    #l = ["fr"]
+    #for lang in l:
     for lang in tqdm(sorted_dict_languages[0:number]):
 
         createFolder(f"data/clusters/{lang}")
-        removeFolder(f"data/clusters/{lang}/{('_').join(genres)}")
         createFolder(f"data/clusters/{lang}/{('_').join(genres)}")
 
         titles, origins = getTitles(lang,genres)
@@ -35,10 +36,39 @@ def KMeansClustering(vectorizer,genres,number,n_clusters=10):
             res = {int(cluster):[] for cluster in sorted(kmean.labels_)}
             for cluster, title in zip(kmean.labels_, titles):
                 res[int(cluster)].append(title)
-            writeJson(f"data/clusters/{lang}/{('_').join(genres)}/Kmeans_{vectorizeName}.json",res)
+            writeJson(f"data/clusters/{lang}/{('_').join(genres)}/KMeans_{vectorizeName}.json",res)
 
 
-def DBscanClustering(titles,vectorizer):
+def DBscanClustering(vectorizer,genres):
+    ""
+
+    vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
+    createFolder(f"data/clusters")
+
+    dict_languages = openJson("logs/dict_languages.json")
+    sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
+
+    l = ["fr"]
+    for lang in l:
+    #for lang in tqdm(sorted_dict_languages[0:number]):
+
+        if os.path.exists(f"data/clusters/{lang}/{('_').join(genres)}/KMeans_{vectorizeName}.json"):
+
+            titles, origins = getTitles(lang,genres)
+            X = getVectors(vectorizer,titles,lang,genres)
+            
+            dbscan = DBSCAN(eps=0.9, min_samples=2)
+            dbscan.fit_predict(X)
+
+            clusters = {}
+            for title, label in zip(titles, dbscan.labels_):
+                if str(label) not in clusters:
+                    clusters[str(label)] = []
+                clusters[str(label)].append(title)
+            writeJson(f"data/clusters/{lang}/{('_').join(genres)}/DBscan_{vectorizeName}.json",clusters) 
+
+
+def OLDDBscanClustering(titles,vectorizer):
     ""
         
     X = vectorizer.fit_transform(titles)
