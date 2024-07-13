@@ -11,7 +11,9 @@ import shutil
 import urllib.request
 
 import re
-episode_identifier = re.compile(r"#\d+\.\d")
+episode_identifier1 = re.compile(r"#\d+\.\d")
+episode_identifier2 = re.compile(r"\d*\.?\d* ?(E|e)pisode ?\d*\.?\d*")
+episode_identifier3 = re.compile(r"\d*\.?\d* ?EPISODE ?\d*\.?\d*")
 
 def createFolder(folder):
     "create a folder"
@@ -37,7 +39,7 @@ def isInvalid(errors,title,titleId):
 
 def isEpisode(episodes,title):
     "check if title is an episode"
-    if any(("Episode dated" in title, "Episode #" in title, episode_identifier.search(title))):
+    if any(("Episode dated" in title, "Episode #" in title, episode_identifier1.search(title), episode_identifier2.search(title), episode_identifier3.search(title))):
         episodes.append(title)
         return True
     return False

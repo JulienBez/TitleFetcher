@@ -17,8 +17,6 @@ def KMeansClustering(vectorizer,genres,number,n_clusters=10):
     dict_languages = openJson("logs/dict_languages.json")
     sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
 
-    #l = ["fr"]
-    #for lang in l:
     for lang in tqdm(sorted_dict_languages[0:number]):
 
         createFolder(f"data/clusters/{lang}")

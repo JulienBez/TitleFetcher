@@ -7,16 +7,16 @@ import shutil
 from tqdm import tqdm
 
 def openJson(path):
-  "open a json file"
-  with open(path,'r',encoding='utf-8') as f:
-    data = json.load(f)
-  return data
+    "open a json file"
+    with open(path,'r',encoding='utf-8') as f:
+        data = json.load(f)
+    return data
   
 
 def writeJson(path,data):
-  "create a json file"
-  with open(path,"w",encoding='utf-8') as f:
-    json.dump(data,f,indent=4,ensure_ascii=False)
+    "create a json file"
+    with open(path,"w",encoding='utf-8') as f:
+        json.dump(data,f,indent=4,ensure_ascii=False)
 
 
 def createFolder(folder):
@@ -26,22 +26,22 @@ def createFolder(folder):
 
 
 def removeFolder(folder):
-   "remove a folder and its content"
-   if os.path.exists(folder):
-      shutil.rmtree(folder)
+    "remove a folder and its content"
+    if os.path.exists(folder):
+        shutil.rmtree(folder)
 
 
 def openVector(path):
-  "open a vector save"
-  with open(path, 'rb') as file:
-    vector = pickle.load(file)
-  return vector
+    "open a vector save"
+    with open(path, 'rb') as file:
+        vector = pickle.load(file)
+    return vector
 
 
 def writeVector(path,vector):
-  "create a vector save"
-  with open(path, 'wb') as file:
-    pickle.dump(vector, file)
+    "create a vector save"
+    with open(path, 'wb') as file:
+        pickle.dump(vector, file)
 
 
 def getTitles(language,genres):
@@ -104,11 +104,11 @@ def getVectors(vectorizer,titles,language,genres):
 
 
 def getClustersTags(vectorizer,language,genres,titles,clusteType):
-  "for each title, retrieve in wich cluster it was found" 
-  vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
-  dict_clusters = openJson(f"data/clusters/{language}/{('_').join(genres)}/{clusteType}_{vectorizeName}.json")  
-  clusterTags = []
-  for title in titles:
-      index = [key for key, value in dict_clusters.items() if title in value][0]
-      clusterTags.append(index)
-  return clusterTags
+    "for each title, retrieve in wich cluster it was found" 
+    vectorizeName = "".join(x for x in str(vectorizer).replace(" ","_") if x.isalnum() or x == "_")
+    dict_clusters = openJson(f"data/clusters/{language}/{('_').join(genres)}/{clusteType}_{vectorizeName}.json")  
+    clusterTags = []
+    for title in titles:
+        index = [key for key, value in dict_clusters.items() if title in value][0]
+        clusterTags.append(index)
+    return clusterTags

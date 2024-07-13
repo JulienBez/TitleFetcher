@@ -123,7 +123,7 @@ def getBasicMetadatasHistogram(logscale=True):
     plt.close()
 
 
-def getVizualisation(vectorizer,genres,number,clusters=False,clusteType="Kmeans"):
+def getVizualisation(vectorizer,genres,number,clusters=False,clusteType="KMeans"):
     "for each language, plot its titles vectors points to see if clustering might helps us"
 
     name = "_".join(genres)
@@ -201,43 +201,9 @@ def getVizualisation(vectorizer,genres,number,clusters=False,clusteType="Kmeans"
 
         plt.savefig(f"logs/images/{folderName}/{name}/{number}_{vectorizeName}.png",bbox_inches='tight')
         plt.close()
-        
-
-def dataVisualisationLoop(genres,number):
-    "proceed getDataVizualisation with different parameters"
-    
-    createFolder("logs")
-    createFolder("images")
-    createFolder("getDataVizualisation")
-
-    timeWindowsName = f"{number}_{('_').join(genres)}"
-    runtimePath = "logs/images/getDataVizualisation/runtimes.json"
-
-    if not os.path.isfile(runtimePath):
-        writeJson(runtimePath,[])
-
-    ngrams = [(1,1),(2,2)]
-    analyzers = ["char","word","char_wb"]
-
-    stop_words = None
-    lowercase = True
-
-    for ngram in ngrams:
-        for analyzer in analyzers:
-
-            start = time.time()
-
-            vectorizer = TfidfVectorizer(ngram_range=ngram, stop_words=stop_words, lowercase=lowercase, analyzer=analyzer)
-            getVizualisation(vectorizer,genres,number)
-
-            end = time.time()
-        
-            runtimes = openJson(runtimePath)
-            runtimes.append([timeWindowsName,str(vectorizer),round(end - start,2)])
-            writeJson(runtimePath,runtimes)
 
 
-def getGenresPerClusters(vectorizer,genres,number,clusteType):
+def getGenresPerClusters(vectorizer,genres,number,clusteType="KMeans"):
     ""
 
     name = "_".join(genres)
