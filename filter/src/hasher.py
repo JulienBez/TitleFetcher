@@ -1,12 +1,15 @@
 import numpy as np
 from hashlib import sha1
+from joblib import Parallel, delayed
 from datasketch.lsh import MinHashLSH
 from datasketch.minhash import MinHash
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from .navigation import *
 
 def makeQuery(title,lsh,num_per,ngram_range):
-    ""
+    "make a query using a given title and lsh parameters"
     minhash = MinHash(num_perm=num_per)
     ngram_title = set()
     for ngram in ngram_range:
@@ -17,7 +20,7 @@ def makeQuery(title,lsh,num_per,ngram_range):
 
 
 def getMinhashes(language,genres,titles,treshold,num_per,ngram_range):
-    ""
+    "create a lsh index with specified parameters and save it if not exist"
 
     createFolder("data/minhashes")
     createFolder(f"data/minhashes/{language}")
@@ -47,7 +50,7 @@ def getMinhashes(language,genres,titles,treshold,num_per,ngram_range):
 
 
 def getLSHCluster(genres,number,treshold=0.5,num_per=128,ngram_range=(2,3)):
-    ""
+    "make queries over lsh index to create clusters"
 
     createFolder("data/clusters")
 
@@ -68,14 +71,67 @@ def getLSHCluster(genres,number,treshold=0.5,num_per=128,ngram_range=(2,3)):
         while titles:
             res_query = makeQuery(titles.pop(),lsh,num_per,ngram_range)
             res.append(res_query)
-            titles.difference_update(set(res_query)) #on retire des queries tous les éléments qu'on a déjà vu au moins une fois pour accélérer la procédure
+            titles.difference_update(set(res_query)) #remove titles with saw at least 1 time to reduce the number of clusters
 
         writeJson(f"data/clusters/{lang}/{('_').join(genres)}/LSH_treshold{treshold}_numper{num_per}_ngram{'-'.join([str(i) for i in ngram_range])}.json",res)
 
 
-def mergeSimilarClusters(clusters,intersection=0.5):
+def coherenceMeasure(cluster):
     ""
+    
+    vectorizer = TfidfVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
+    allCos = []
 
+    for i in range(len(cluster)-1):
+
+        try:
+            X = vectorizer.fit_transform([cluster[i],cluster[i+1]])
+            simCos = cosine_similarity(X[0:1], X[1:2])[0][0]
+            allCos.append(simCos)
+
+        except:
+            allCos.append(0.0)
+    
+    return sum(allCos)/len(allCos)
+
+
+def sortByCoherence(clusters, n_jobs=-1):
+    "parallel processing of coherence measure over all clusters"
+    cluster_similarities = Parallel(n_jobs=n_jobs)(
+        delayed(lambda cluster: {"cluster": cluster, "coherence": coherenceMeasure(cluster)})
+        (cluster)
+        for cluster in clusters
+        )    
+    sorted_clusters = sorted(cluster_similarities, key=lambda x: x["coherence"], reverse=True)
+    return sorted_clusters
+
+
+def getCoherenceMeasure(path):
+    ""
+    data = openJson(path)
+    new_data = []
+    for cluster in data:
+        if len(cluster) > 1:
+            new_data.append(cluster)
+    writeJson(path,sortByCoherence(new_data))
+
+
+def dropLessCoherent(path,thresold=0.4):
+    ""
+    data = openJson(path)
+    new_data = []
+    for cluster in data:
+        if cluster["coherence"] >= thresold:
+            new_data.append(cluster)
+    print(f"initial number of clusters : {len(data)}")
+    print(f"number of clusters after dropLessCoherent filter : {len(new_data)}")
+    writeJson("test.json",new_data)
+
+
+def mergeSimilarClusters(clusters,intersection=0.5):
+    "merge similar clusters to avoid redondance"
+
+    clusters = [i["cluster"] for i in clusters]
     merged_sets = []
     set_clusters = [set(c) for c in sorted(clusters, key=len)]
 
@@ -100,6 +156,8 @@ def mergeSimilarClusters(clusters,intersection=0.5):
         del set_clusters[0]
 
         print(f"\033[2K\r{len(set_clusters)}", end='', flush=True)
+    
+    print(f"initial number of clusters : {len(clusters)}")
+    print(f"number of clusters after mergeSimilarClusters filter : {len(merged_sets)}")
 
     return [list(ms) for ms in merged_sets]
-
