@@ -16,15 +16,17 @@ if __name__ == "__main__":
     #getBasicMetadatasHistogram(logscale=False)
 
     #getLSHCluster(["movie"],1,treshold=0.4,num_per=256,ngram_range=(3,3))
-    #getCoherenceMeasure("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json")
+    getCoherenceMeasure("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json")
     #getCoherenceMeasure("autosampleTEST.json")
-    dropLessCoherent("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json",thresold=0.4)
+    #dropLessCoherent("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json",thresold=0.4)
     #data = mergeSimilarClusters(openJson("test.json"),intersection=0.5)
     #writeJson("test.json",data)
     
     #data = openJson("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json")
     #new_data = [i["cluster"] for i in data]
     #writeJson("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json",new_data)
+
+    #autosample = sum(openJson("autosample_final.json"), [])
 
     ############################################
 

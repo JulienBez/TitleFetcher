@@ -1,5 +1,6 @@
 import numpy as np
 from hashlib import sha1
+from itertools import combinations
 from joblib import Parallel, delayed
 from datasketch.lsh import MinHashLSH
 from datasketch.minhash import MinHash
@@ -21,77 +22,56 @@ def makeQuery(title,lsh,num_per,ngram_range):
 
 def getMinhashes(language,genres,titles,treshold,num_per,ngram_range):
     "create a lsh index with specified parameters and save it if not exist"
-
     createFolder("data/minhashes")
     createFolder(f"data/minhashes/{language}")
-
     pathLSH = f"data/minhashes/{language}/{language}_treshold{treshold}_numper{num_per}_ngram{'-'.join([str(i) for i in ngram_range])}_{('_').join(genres)}.lsh"
     if not os.path.isfile(pathLSH):
-
         lsh = MinHashLSH(threshold=treshold, num_perm=num_per)
-
         for title in titles:
-
             ngram_title = set()
             for ngram in ngram_range:
                 ngram_title.update(set([title.lower()[i:i+ngram] for i in range(len(title)-1)]))
-
             minhash = MinHash(num_perm=num_per)        
             for ntitle in ngram_title:
                 minhash.update(ntitle.encode('utf-8'))
-
             lsh.insert(title, minhash)
-        writeVector(pathLSH,lsh)
-    
+        writeVector(pathLSH,lsh) 
     else:
         lsh = openVector(pathLSH)
-
     return lsh
 
 
 def getLSHCluster(genres,number,treshold=0.5,num_per=128,ngram_range=(2,3)):
     "make queries over lsh index to create clusters"
-
     createFolder("data/clusters")
-
     dict_languages = openJson("logs/dict_languages.json")
     sorted_dict_languages = [i[0] for i in sorted(dict_languages.items(), key=lambda x:x[1],reverse=True)]
-
     for lang in ["fr"]:
     #for lang in tqdm(sorted_dict_languages[1:number-1]):
-
         createFolder(f"data/clusters/{lang}")
         createFolder(f"data/clusters/{lang}/{('_').join(genres)}")
-
         titles, origins = getTitles(lang,genres)
         titles = set(titles)
         lsh = getMinhashes(lang,genres,titles,treshold,num_per,ngram_range)
-
         res = []
         while titles:
             res_query = makeQuery(titles.pop(),lsh,num_per,ngram_range)
             res.append(res_query)
             titles.difference_update(set(res_query)) #remove titles with saw at least 1 time to reduce the number of clusters
-
         writeJson(f"data/clusters/{lang}/{('_').join(genres)}/LSH_treshold{treshold}_numper{num_per}_ngram{'-'.join([str(i) for i in ngram_range])}.json",res)
 
 
 def coherenceMeasure(cluster):
-    ""
-    
+    "vectorize each possible pair in a cluster to get a list of cosine similarity, then get mean of this list"  
     vectorizer = TfidfVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
     allCos = []
-
-    for i in range(len(cluster)-1):
-
+    for pair in list(combinations(cluster,2)):
         try:
-            X = vectorizer.fit_transform([cluster[i],cluster[i+1]])
+            X = vectorizer.fit_transform([pair[0],pair[1]])
             simCos = cosine_similarity(X[0:1], X[1:2])[0][0]
             allCos.append(simCos)
-
         except:
-            allCos.append(0.0)
-    
+            allCos.append(0.0)  
     return sum(allCos)/len(allCos)
 
 
@@ -111,8 +91,9 @@ def getCoherenceMeasure(path):
     data = openJson(path)
     new_data = []
     for cluster in data:
-        if len(cluster) > 1:
-            new_data.append(cluster)
+        cluster_clean = list(set([c.lower() for c in cluster])) #remove noise, aka clusters with same titles when lower() applied
+        if len(cluster_clean) > 1: #remove uninteressting clusters
+            new_data.append(cluster_clean)
     writeJson(path,sortByCoherence(new_data))
 
 
@@ -131,33 +112,4 @@ def dropLessCoherent(path,thresold=0.4):
 def mergeSimilarClusters(clusters,intersection=0.5):
     "merge similar clusters to avoid redondance"
 
-    clusters = [i["cluster"] for i in clusters]
-    merged_sets = []
-    set_clusters = [set(c) for c in sorted(clusters, key=len)]
-
-    while set_clusters:
-
-        to_remove = []
-        pointer = set_clusters[0]
-
-        for i in range(1, len(set_clusters)):
-
-            intersection_size = len(pointer.intersection(set_clusters[i]))
-            min_size = min(len(pointer), len(set_clusters[i]))
-
-            if intersection_size >= intersection * min_size:
-                pointer.update(set_clusters[i])
-                to_remove.append(i)
-
-        merged_sets.append(pointer)
-        
-        for ind in sorted(to_remove,reverse=True):
-            del set_clusters[ind]
-        del set_clusters[0]
-
-        print(f"\033[2K\r{len(set_clusters)}", end='', flush=True)
     
-    print(f"initial number of clusters : {len(clusters)}")
-    print(f"number of clusters after mergeSimilarClusters filter : {len(merged_sets)}")
-
-    return [list(ms) for ms in merged_sets]
