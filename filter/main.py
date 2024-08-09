@@ -1,96 +1,87 @@
 from src.navigation import *
 from src.languages import *
-from src.clustering import *
 from src.metadata import *
-
 from src.hasher import *
 
 if __name__ == "__main__":
 
     start = time.time()
 
-    #languageStep()
-    #print("basic metadatas...")
-    #getBasicMetadatas()
-    #getBasicMetadatasHistogram(logscale=True)
-    #getBasicMetadatasHistogram(logscale=False)
+    getLSHCluster(["movie"],1,treshold=0.5,num_per=256,ngram_range=(3,3))
+    getCoherenceMeasure("data/clusters/fr/movie/LSH_treshold0.5_numper256_ngram3-3.json")
+    dropLessCoherent("data/clusters/fr/movie/LSH_treshold0.5_numper256_ngram3-3.json",thresold=0.5)
 
-    #getLSHCluster(["movie"],1,treshold=0.4,num_per=256,ngram_range=(3,3))
-    getCoherenceMeasure("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json")
-    #getCoherenceMeasure("autosampleTEST.json")
-    #dropLessCoherent("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json",thresold=0.4)
-    #data = mergeSimilarClusters(openJson("test.json"),intersection=0.5)
-    #writeJson("test.json",data)
+    t,_ = getTitles("fr",["movie"])
+    print(len(t))
+
+    a = openJson("test.json")
+    print(len(a))
     
-    #data = openJson("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json")
-    #new_data = [i["cluster"] for i in data]
-    #writeJson("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram3-3.json",new_data)
+    counter = 0
+    for i in a:
+        counter += len(i["cluster"])
+    print(counter)
 
-    #autosample = sum(openJson("autosample_final.json"), [])
-
-    ############################################
-
-    #data = openJson("sample.json")
-    #data = [list(set([a.lower() for a in d])) for d in data]
-    #print(len(data))
-    #writeJson("sample_clean.json",data)
-
-    # LSH CLUSTERS #
-
-    #genres = ["movie"]
-    #number = 9
-
-    #print("LSH clusters...")
-
-    #treshold = [0.3,0.4,0.5,0.6,0.7]
-    #num_per = [256]
-    #ngram_range = [(2,2),(3,3),(2,3)]
-
-    #counter = 0
-    #total = len(treshold) * len(num_per) * len(ngram_range)
-
-    #for n in ngram_range:
-    #    for p in num_per:
-    #        for t in treshold:
-    #            pathy = f"data/clusters/fr/{('_').join(genres)}/LSH_treshold{t}_numper{p}_ngram{'-'.join([str(i) for i in n])}.json"
-    #            if not os.path.exists(pathy):
-    #                getLSHCluster(genres,number,treshold=t,num_per=p,ngram_range=n)
-    #            counter += 1
-    #            print(f"\033[2K\r{counter}/{total}", end='', flush=True)
-
-    #data = openJson("data/clusters/fr/movie/LSH_treshold0.4_numper256_ngram2-3.json")
-    #print(len(data))
-    #new_data = []
-    #total = 0  
-    #for i in data:
-    #    if len(i) > 1:
-    #        new_data.append(i)
-    #        total += len(i)
-    #print(len(new_data))
-    #print(total)
-
-    #writeJson("test.json",new_data)
-    #new_new_data = openJson("test2.json")
-    #writeJson("test3.json",mergeSimilarClusters(new_new_data,intersection=0.2))
     
-    #writeJson("test.json",sorted(new_data, key=len, reverse=True))
+    ###
 
-    # CLUSTERISATION #
+    c = 0
+    for j in a:
+        if j["coherence"] >= 0.9 or len(j["cluster"]) <= 4:
+            c += 1
+    print("candidats elimination : ",c)
+    
+    ###
 
-    #vectorizer = TfidfVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
+    
+    cyes = 0
+    cno = 0
 
-    #print("first vizualisation...")
-    #getVizualisation(vectorizer,genres,number)
+    tyes = 0
+    tno = 0
 
-    #print("KMeans...")
-    #KMeansClustering(vectorizer,genres,number)
-    #getVizualisation(vectorizer,genres,number,clusters=True,clusterType="KMeans")
-    #getGenresPerClusters(vectorizer,genres,number,clusterType="KMeans")
+    syes = set()
+    sno = set()
 
-    #print("DBscan...")
-    #DBscanClustering(vectorizer,genres)
-    #getVizualisation(vectorizer,genres,number,clusters=True,clusterType="DBscan")
-    #getGenresPerClusters(vectorizer,genres,number,clusterType="DBscan")
+    for i in a:
+        if i["coherence"] >= 0.5:
+            cyes += 1
+            tyes += len(i["cluster"])
+            for j in i["cluster"]:
+                syes.add(j)
+        else:
+            cno += 1
+            tno += len(i["cluster"])
+            for j in i["cluster"]:
+                sno.add(j)
+
+    print(cyes,"\t",tyes,"\t",len(syes))
+    print(cno,"\t",tno,"\t",len(sno))
+
+    correct = set(sum([[i.lower() for i in j]for j in openJson("sample.json")],[]))
+    print(len(syes.intersection(correct)),"/",len(correct))
+
+    sno_fix = sno.difference(syes)
+
+    print(len(sno.intersection(correct)),"/",len(correct))
+    print(len(sno_fix.intersection(correct)),"/",len(correct))
+
+    writeJson('no_fix.json',list(sno_fix.intersection(correct)))
+
+    def dropDuplicates(path):
+        ""
+        data = [set(i["cluster"]) for i in openJson(path)]
+        frozensets = set(frozenset(s) for s in data)
+        uniques = [list(set(fs)) for fs in frozensets]
+        writeJson("testfroz.json",uniques)
+
+    dropDuplicates('test.json')
+    data = openJson("testfroz.json")
+    print(len(data))
+
+    ###
+
+    liste_voc = []
 
     end = time.time()
     print(f"executed in {round(end - start,2)}")

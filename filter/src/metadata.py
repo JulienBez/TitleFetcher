@@ -6,7 +6,6 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from .navigation import *
-from .clustering import *
 
 def getBasicMetadatas():
     "get some basic metadatas for each language"
