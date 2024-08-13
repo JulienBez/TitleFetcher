@@ -48,7 +48,7 @@ def parallelGetMinhash(language,num_perm,ngram_range,n_jobs=-1):
         minhash_dict = Parallel(n_jobs=n_jobs,backend='loky')(
             delayed(getMinhash)(title,num_perm,ngram_range) for title in tqdm(titles)
         )
-        minhash_dict = {i:m for i,m in enumerate(minhash_dict) if m is not None}
+        minhash_dict = {titles[i]:m for i,m in enumerate(minhash_dict) if m is not None}
         writeBin(minhash_path,minhash_dict)
     else:
         minhash_dict = openBin(minhash_path)
@@ -69,10 +69,10 @@ def getCoherence(cluster):
 
 def parallelGetCoherence(language,clusters,n_jobs=-1):
     "parallel processing of coherence measure over all clusters"
-    clusters = [cluster for cluster in clusters if len(list(set([c.lower() for c in cluster]))) > 1]
+    clusters = [cluster for cluster in clusters if len(list(set([c.lower() for c in cluster["cluster"]]))) > 1]
     print(f"calculating coherence measures for {language}")
     cluster_similarities = Parallel(n_jobs=n_jobs)(
-        delayed(lambda cluster: {"cluster": cluster, "coherence": getCoherence(cluster)})
+        delayed(lambda cluster: {"query":cluster["query"],"cluster": cluster["cluster"], "coherence": getCoherence(cluster["cluster"])})
         (cluster) for cluster in tqdm(clusters))    
     sorted_clusters = sorted(cluster_similarities, key=lambda x: x["coherence"], reverse=True)
     return sorted_clusters
@@ -80,11 +80,10 @@ def parallelGetCoherence(language,clusters,n_jobs=-1):
 
 def getLSH(language,minhashes,threshold,num_perm):
     "create a LSH index with the specified threshold"
-    titles = getTitles(language)
     lsh = MinHashLSH(threshold=threshold, num_perm=num_perm)
     print(f"populating LSH index for {language}")
     for k,v in tqdm(minhashes.items()):
-        lsh.insert(titles[k],v)
+        lsh.insert(k,v)
     return lsh
 
 
@@ -97,35 +96,39 @@ def getLSHCluster(language,threshold=0.5,num_perm=256,ngram_range=(3,3)):
     clusters = []
     print(f"querying over the LSH index for {language}")
     for k,v in tqdm(minhashes.items()):
-        results = set(lsh.query(v))
-        clusters.append(results)
-    writeJson(output_file,parallelGetCoherence(language,[list(c) for c in clusters]))
+        clusters.append({"query":k,"cluster":list(set(lsh.query(v)))})
+    writeJson(output_file,parallelGetCoherence(language,clusters))
 
 
-def getHeadClusters(path):
-    "for each title, find the cluster with the best coherence score containing this title"
-    clusters = openJson(path)
-    map = {}
-    for i,cluster in enumerate(clusters):
-        for title in cluster["cluster"]:
-            if title not in map:
-                map[title] = i
-    new_clusters = [clusters[idx] for idx in set([v for k,v in map.items()])]
-    print(f"initial number of clusters : {len(clusters)}")
-    print(f"number of clusters after getHeadClusters filter : {len(new_clusters)}")
-    writeJson("test.json",new_clusters)
-
-
-def dropLessCoherent(path,threshold=0.4):
+def getQueryClusters(path):
     ""
+    
     clusters = openJson(path)
-    new_clusters = []
-    for cluster in clusters:
-        if cluster["coherence"] >= threshold:
-            new_clusters.append(cluster)
-    print(f"initial number of clusters : {len(clusters)}")
-    print(f"number of clusters after dropLessCoherent filter : {len(new_clusters)}")
-    writeJson("test.json",new_clusters)
+    queries = [cluster["query"].lower() for cluster in clusters]
+    
+    from sklearn.cluster import Birch
+    vectorizer = CountVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
+    X = vectorizer.fit_transform(queries).toarray()
 
+    clustering = Birch(threshold=0.5,n_clusters=None)
+    labels = clustering.fit_predict(X)
 
+    clusters_dict = {}
+    for query,label in zip(queries, labels):
+        lab = str(label)
+        if lab not in clusters_dict:
+            clusters_dict[lab] = []
+        clusters_dict[lab].append(query)
 
+    writeJson("testqueries.json",clusters_dict)
+
+#avant de drop les clusters les moins cohérents : 
+# pour chaque cluster, récupérer la query qui a donné ce cluster
+# on recherche les cluster heads
+# pour chaque cluster head, on récupère sa query
+# on clusterise les queries sur du DBSCAN en récupérant les ids à la fin du clustering
+# on merge les clusters originaux (avant DBSCAN) à l'aide des clusters d'ids obtenus avec les queries
+# peut-être faire un dropLessCoherent avant pour avoir - de queries à clusteriser
+
+# on peut améliorer le process en recherchant au préalable les queries renvoyant au moins 1 résultat similaire -> on divise nos queries en petits groupes
+#faire droplesscoherent et droplowcluster avant de faire clusterhead
