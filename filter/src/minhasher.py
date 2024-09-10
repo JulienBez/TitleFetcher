@@ -15,12 +15,14 @@ def getTitles(language):
     titlePath = f"data/dictionnaries/dict_{language}.json"
     if not os.path.isfile(titlePath):
         titles = {}
-        for path in glob.glob(f"data/languages/{language}/*.json"):
+        print(f"taking care of duplicates for {language}")
+        for path in tqdm(glob.glob(f"data/languages/{language}/*.json")):
             data = openJson(path)
             for key,value in data.items():
-                if value["title"] not in titles:
-                    titles[value["title"]] = []
-                titles[value["title"]].append(key)
+                title_lower = value["title"] #étape clé : on peut retirer les doublons de MWE avec .lower(), c'est une bonne idée ?
+                if title_lower not in titles:
+                    titles[title_lower] = []
+                titles[title_lower].append(key)
         writeJson(titlePath,titles)
     else:
         titles = openJson(titlePath)
@@ -100,27 +102,99 @@ def getLSHCluster(language,threshold=0.5,num_perm=256,ngram_range=(3,3)):
     writeJson(output_file,parallelGetCoherence(language,clusters))
 
 
-def getQueryClusters(path):
+
+
+
+
+
+
+
+
+
+
+
+####
+
+def mergeClusters(language,threshold=0.5,num_perm=256,ngram_range=(3,3)):
     ""
+
+    output_file = f"output/{language}_{num_perm}_{'-'.join([str(i) for i in ngram_range])}_{threshold}.json"
+    clusters = openJson("test.json")
+
+    merges = []
+    queries = [c["query"] for c in clusters]
+
+    for query in tqdm(queries):
+        merge = [query]
+        for cluster in clusters:
+            if query in cluster["cluster"]:
+                merge.append(cluster["query"])
+
+        merges.append(list(set(merge)))
     
-    clusters = openJson(path)
-    queries = [cluster["query"].lower() for cluster in clusters]
+    writeJson("merge.json",merges)
+    1/0
     
-    from sklearn.cluster import Birch
-    vectorizer = CountVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
-    X = vectorizer.fit_transform(queries).toarray()
 
-    clustering = Birch(threshold=0.5,n_clusters=None)
-    labels = clustering.fit_predict(X)
+    writeJson("a.json",clusters_new)
 
-    clusters_dict = {}
-    for query,label in zip(queries, labels):
-        lab = str(label)
-        if lab not in clusters_dict:
-            clusters_dict[lab] = []
-        clusters_dict[lab].append(query)
 
-    writeJson("testqueries.json",clusters_dict)
+def findBestQueryMatch(title,queries):
+    ""
+    merge = [title] + queries
+    try:
+        vectorizer = CountVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
+        X = vectorizer.fit_transform(merge)
+        cosine_sim = cosine_similarity(X[0:1], X[1:]).flatten()
+        return queries[cosine_sim.argmax()]
+    except:
+        return 0.0
+
+
+def findSimilarLSHClusters(language,threshold=0.5,num_perm=256,ngram_range=(3,3)):
+    ""
+    output_file = f"output/{language}_{num_perm}_{'-'.join([str(i) for i in ngram_range])}_{threshold}.json"
+    clusters = openJson("test.json")
+    dict_titles = {}
+    for cluster in clusters:
+        for title in cluster["cluster"]:
+            if title not in dict_titles:
+                dict_titles[title] = []
+            dict_titles[title].append(cluster["query"])
+    clusters_new = {}
+    for title,queries in tqdm(dict_titles.items()):
+        best_match = findBestQueryMatch(title,queries)
+        if best_match not in clusters_new:
+            clusters_new[best_match] = []
+        clusters_new[best_match].append(title)
+    writeJson("a.json",clusters_new)
+    
+
+
+def findSimilarLSHClustersBIS(language,threshold=0.5,num_perm=256,ngram_range=(3,3)):
+    ""
+    output_file = f"output/{language}_{num_perm}_{'-'.join([str(i) for i in ngram_range])}_{threshold}.json"
+    clusters = openJson(output_file)
+    minhashes = parallelGetMinhash(language,num_perm,ngram_range)
+    queries = [c["query"] for c in clusters]
+    titles = list(set())
+    minhashes_queries = {k:minhashes[k] for k in queries}
+    lsh_queries = getLSH(language,minhashes,threshold,num_perm)
+
+    
+def findSimilarLSHClustersBIS(language,threshold=0.5,num_perm=256,ngram_range=(3,3)):
+    ""
+    output_file = f"output/{language}_{num_perm}_{'-'.join([str(i) for i in ngram_range])}_{threshold}.json"
+    clusters = openJson("test.json")
+    queries = set([c["query"] for c in clusters])
+    for i,cluster in enumerate(clusters):
+        clusters[i]["cluster"] = list(set(cluster["cluster"]).intersection(queries))
+    writeJson("a.json",clusters)
+
+
+# levenshtein après avoir trouvé le meilleur cluster pour chaque titre
+# levenshtein : si la distance est en dessous d'un tout petit threshold, on vire
+# pour virer les suites, les numérotations, ...
 
 #avant de drop les clusters les moins cohérents : 
 # pour chaque cluster, récupérer la query qui a donné ce cluster
@@ -131,4 +205,8 @@ def getQueryClusters(path):
 # peut-être faire un dropLessCoherent avant pour avoir - de queries à clusteriser
 
 # on peut améliorer le process en recherchant au préalable les queries renvoyant au moins 1 résultat similaire -> on divise nos queries en petits groupes
-#faire droplesscoherent et droplowcluster avant de faire clusterhead
+# faire droplesscoherent et droplowcluster avant de faire clusterhead
+
+# pour chaque titre, on regarde les queries qui permettent de le récupérer (après LSH cluster et les filtres)
+# on récupère la sim jaccard de ce titre par rapport à toute les queries permettant de le récupérer et on ne garde que la meilleure (ou faire avec vector + cosine)
+

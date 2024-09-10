@@ -1,11 +1,12 @@
 import re
 import string as strii
+from collections import Counter
 
 from .navigation import *
 
 ## Generic filters - should be fine for all languages ##
 
-def getHeadClusters(path):
+def getHeadClusters(path):  #étape clé : REGARDER CE QU'ON VIRE AVEC, VIRE-T-ON DES CLUSTERS INTERESSANTS ? SI OUI, FAIRE LE MERGE PLUTOT MEME SI LONG
     "for each title, find the cluster with the best coherence score containing this title"
     clusters = openJson(path)
     map = {}
@@ -53,11 +54,19 @@ def dropLowClusters(path,threshold=3):
     print(f"number of clusters after dropLowClusters filter : {len(new_clusters)}")
     writeJson("test.json",new_clusters)
 
+
+def dropByLongestCommonString(path):
+    ""
+    clusters = openJson(path)
+    new_clusters = []
+    for cluster in clusters:
+        pass
+
 ## Language revelant filter - use them according to the studied language ##
 
 def removeNumbers(cluster):
     ""
-    return [re.sub(r'\d+',"",c) for c in cluster]
+    return [re.sub(r'\d+'," ",c) for c in cluster]
 
 
 def removeCases(cluster):
@@ -67,7 +76,7 @@ def removeCases(cluster):
 
 def removePunctuations(cluster):
     ""
-    return [c.translate(str.maketrans('', '', strii.punctuation)) for c in cluster]
+    return [c.translate(str.maketrans({key: " {0} ".format(key) for key in strii.punctuation})) for c in cluster]
 
 
 def removeLargeSpaces(cluster):
@@ -87,14 +96,13 @@ def applyLanguageSpecificFilters(path,numbers=True,cases=True,punctuation=True):
             cluster_clean = removeCases(cluster_clean)
         if punctuation:
             cluster_clean = removePunctuations(cluster_clean)
-        cluster_clean = set(removeLargeSpaces(cluster_clean))
-        if len(cluster_clean) > 1:
+        cluster_clean = removeLargeSpaces(cluster_clean)
+        maxi = Counter(cluster_clean).most_common(1)[0][1]
+        if maxi/len(cluster) < 0.9:
             new_clusters.append(cluster)
     print(f"initial number of clusters : {len(clusters)}")
     print(f"number of clusters after applyLanguageSpecificFilters filter : {len(new_clusters)}")
     writeJson("test.json",new_clusters)
-
-
 
 
 #avant de drop les clusters les moins cohérents : 

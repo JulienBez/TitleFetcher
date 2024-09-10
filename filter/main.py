@@ -3,40 +3,7 @@ from src.languages import *
 from src.metadata import *
 from src.minhasher import *
 from src.filters import *
-
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.cluster import DBSCAN
-import json
-
-
-start = time.time()
-
-# Example list of sentences
-sentences = [c["query"] for c in openJson("test.json")]
-
-# Initialize CountVectorizer and vectorize all sentences
-vectorizer = CountVectorizer()
-X = vectorizer.fit_transform(sentences)
-
-# Apply DBSCAN clustering
-cluster_labels = DBSCAN(eps=0.2, min_samples=1, metric='cosine',n_jobs=-1).fit_predict(X)
-
-# Store sentences in clusters
-clusters = {}
-for idx, label in enumerate(cluster_labels):
-    if label == -1:
-        continue
-    clusters.setdefault(label, []).append(sentences[idx])
-
-# Convert to list of clusters and save as JSON
-clusters_list = list(clusters.values())
-with open("clusters.json", "w") as f:
-    json.dump(clusters_list, f, indent=4)
-
-print("Clusters saved to clusters.json")
-
-end = time.time()
-print(f"executed in {round(end - start,2)}")
+from src.clustering import *
 
 if __name__ == "__main__":
 
@@ -52,14 +19,69 @@ if __name__ == "__main__":
     
     #getLSHCluster(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
     #getHeadClusters(path)
+    #dropLessCoherent("test.json",threshold=0.6)
 
-    #dropLessCoherent("test.json")
+    #findSimilarLSHClusters(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
+
+    mergeClusters(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
+
+    a = openJson("a.json")
+
+    import re
+    new_a = {}
+    for i,j in tqdm(a.items()):
+        verif = [re.sub('\d', '#', k) for k in j]
+        if len(set(verif)) > len(j)/2:
+            new_a[i] = j
+    
+    writeJson("new_a.json",new_a)
+    a = new_a
+    #
+
+    """
+    counters = {}
+    thresholds = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]
+
+    for i in a:
+        coherence = i["coherence"]
+        for j in range(len(thresholds)-1):
+            if coherence >= thresholds[j] and coherence < thresholds[j+1]:
+                count = str(thresholds[j])+"-"+str(thresholds[j+1])
+                if count not in counters:
+                    counters[count] = 0
+                counters[count] += len(i["cluster"])
+
+    print(counters)
+    """
+    #
+
+    print(len(a))
+    
+    b = 0
+    c = 0
+
+    new_new_a = {}
+
+    for k,v in a.items():
+        if len(v) > 2:
+            b += len(v)
+            new_new_a[k] = v
+        else:
+            c += 1
+
+    print(b)
+    print(c)   
+    writeJson("new_new_a.json",new_new_a)
+
+    #DBSCAN() #too bad
+    #Aglomerative() #too long
+    #HDBSCAN() #too much ram
+    #OPTICS() #too long
+    #AffinityPropagation() #too much ram
+
     #applyLanguageSpecificFilters("test.json")
-
     #dropLowClusters("test.json")
-    
-    
-    #getQueryClusters("test.json")
+    #dropTooCoherent("test.json")
 
     end = time.time()
     print(f"executed in {round(end - start,2)}")
