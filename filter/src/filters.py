@@ -6,7 +6,7 @@ from .navigation import *
 
 ## Generic filters - should be fine for all languages ##
 
-def getHeadClusters(path):  #étape clé : REGARDER CE QU'ON VIRE AVEC, VIRE-T-ON DES CLUSTERS INTERESSANTS ? SI OUI, FAIRE LE MERGE PLUTOT MEME SI LONG
+def getHeadClusters(path):
     "for each title, find the cluster with the best coherence score containing this title"
     clusters = openJson(path)
     map = {}

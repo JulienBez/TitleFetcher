@@ -4,11 +4,14 @@ from src.metadata import *
 from src.minhasher import *
 from src.filters import *
 from src.clustering import *
+from src.findSnowclone import *
 
 if __name__ == "__main__":
 
     start = time.time()
 
+    #split titles according to language
+    #languageStep()
 
     language = "fr"
     num_perm = 256
@@ -17,26 +20,18 @@ if __name__ == "__main__":
 
     path = f"output/{language}_{num_perm}_{'-'.join([str(i) for i in ngram_range])}_{threshold}.json"
     
+    #filtrer les clusters moins pertinents
     #getLSHCluster(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
     #getHeadClusters(path)
     #dropLessCoherent("test.json",threshold=0.6)
 
+    #combiner les clusters proches - très mal implémenté
     #findSimilarLSHClusters(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
 
-    mergeClusters(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
+    #???
+    #mergeClusters(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
 
-    a = openJson("a.json")
-
-    import re
-    new_a = {}
-    for i,j in tqdm(a.items()):
-        verif = [re.sub('\d', '#', k) for k in j]
-        if len(set(verif)) > len(j)/2:
-            new_a[i] = j
-    
-    writeJson("new_a.json",new_a)
-    a = new_a
-    #
+    findSnowclone(path)
 
     """
     counters = {}
@@ -53,25 +48,7 @@ if __name__ == "__main__":
 
     print(counters)
     """
-    #
-
-    print(len(a))
     
-    b = 0
-    c = 0
-
-    new_new_a = {}
-
-    for k,v in a.items():
-        if len(v) > 2:
-            b += len(v)
-            new_new_a[k] = v
-        else:
-            c += 1
-
-    print(b)
-    print(c)   
-    writeJson("new_new_a.json",new_new_a)
 
     #DBSCAN() #too bad
     #Aglomerative() #too long
