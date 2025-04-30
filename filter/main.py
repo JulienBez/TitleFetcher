@@ -20,8 +20,9 @@ if __name__ == "__main__":
 
     path = f"output/{language}_{num_perm}_{'-'.join([str(i) for i in ngram_range])}_{threshold}.json"
     
-    #filtrer les clusters moins pertinents
     #getLSHCluster(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
+
+    #filtrer les clusters moins pertinents
     #getHeadClusters(path)
     #dropLessCoherent("test.json",threshold=0.6)
 
@@ -32,6 +33,7 @@ if __name__ == "__main__":
     #mergeClusters(language,threshold=threshold,num_perm=num_perm,ngram_range=ngram_range)
 
     findSnowclone(path)
+    filterPatterns("tetest.json")
 
     """
     counters = {}

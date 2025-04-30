@@ -57,7 +57,7 @@ def parallelGetMinhash(language,num_perm,ngram_range,n_jobs=-1):
     return minhash_dict
 
 
-def getCoherenceOLD(cluster):
+def getCoherence(cluster):
     "vectorize each possible pair in a cluster to get a list of cosine similarity, then get mean of this list"
     try:
         vectorizer = CountVectorizer(ngram_range=(3, 3), stop_words=None, lowercase=True, analyzer="char")
