@@ -1,6 +1,6 @@
-# DataCollect
+# TitleFetcher
 
-In order to create our corpus, we searched for titles in 3 main sources : movies, press papers and scientific papers. This folder contains every scripts we used to collect those titles. You can execute everything at once using the following script :
+With the aim to collect titles from different sources for later use, we searched for titles in 3 main sources : movies, press papers and scientific papers. This folder contains every scripts we used to collect those titles. You can execute everything at once using the following script:
 
 ```
 bash executeAll.sh
@@ -12,7 +12,7 @@ If you wish to fetch titles from only one of the three sources availables, we in
 
 ## MovieFinder
 
-This is a very simple script that allows us to download, read and extract titles from [IMDb non-commercial datasets](https://developer.imdb.com/non-commercial-datasets/). Since those datasets are said to be updated daily, the number of collected titles may vary. To use it, go to **MovieFinder** folder and use the following command :
+This is a very simple script that allows us to download, read and extract titles from [IMDb non-commercial datasets](https://developer.imdb.com/non-commercial-datasets/). Since those datasets are said to be updated daily, the number of collected titles may vary. To use it, go to **MovieFinder** folder and use the following command:
 
 ```
 python movieMain.py
@@ -22,7 +22,7 @@ The resulting dataset will be stored in the newly created **MovieFinder/data/spl
 
 ## PaperFinder
 
-This script allows us to fetch scientific article titles from the [OpenAlex](https://openalex.org/) website. We use [OpenAlex' API](https://docs.openalex.org/how-to-use-the-api/api-overview) in order to do so. To use it, go to **PaperFinder** folder and use the following command :
+This script allows us to fetch scientific article titles from the [OpenAlex](https://openalex.org/) website. We use [OpenAlex' API](https://docs.openalex.org/how-to-use-the-api/api-overview) in order to do so. To use it, go to **PaperFinder** folder and use the following command:
 
 ```
 python paperMain.py
@@ -32,7 +32,7 @@ python paperMain.py
 
 ## PressFinder
 
-We search for press article titles from (Felix Leeb & Bernhard Schölkopf, 2024) corpus, Babel Briefings. Since it is needed to be logged in either to [Kaggle](https://www.kaggle.com/datasets/felixludos/babel-briefings) or [HuggingFace](https://huggingface.co/datasets/felixludos/babel-briefings) in order to download this corpus, it must be downloaded manually and then extracted in **PressFinder/data** folder. Once it is done, you can simply go to **PressFinder** folder and use the following command :
+We search for press article titles from (Felix Leeb & Bernhard Schölkopf, 2024) corpus, Babel Briefings. Since it is needed to be logged in either to [Kaggle](https://www.kaggle.com/datasets/felixludos/babel-briefings) or [HuggingFace](https://huggingface.co/datasets/felixludos/babel-briefings) in order to download this corpus, it must be downloaded manually and then extracted in **PressFinder/data** folder. Once it is done, you can simply go to **PressFinder** folder and use the following command:
 
 ```
 python pressMain.py
